@@ -1,22 +1,22 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 )
 
-func helloHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "hello")
-}
-
-func faviconHandler(w http.ResponseWriter, r *http.Request) {
-	// just ignore this crap
+func makeHandler(fn func(http.ResponseWriter, *http.Request, *Site), s *Site) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		fn(w, r, s)
+	}
 }
 
 func main() {
-	http.HandleFunc("/", helloHandler)
+	w := os.Getenv("CASK_WRITEABLE") == "True"
+	n := NewNode(os.Getenv("CASK_UUID"), os.Getenv("CASK_BASE_URL"), w)
+	s := NewSite(n)
+	http.HandleFunc("/", makeHandler(helloHandler, s))
 	http.HandleFunc("/favicon.ico", faviconHandler)
 	log.Fatal(http.ListenAndServe(":"+os.Getenv("CASK_PORT"), nil))
 }
