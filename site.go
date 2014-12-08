@@ -1,11 +1,13 @@
 package main
 
 type Site struct {
-	Node *Node
+	Node    *Node
+	Backend Backend
 }
 
-func NewSite(n *Node) *Site {
+func NewSite(n *Node, b Backend) *Site {
 	return &Site{
-		Node: n,
+		Node:    n,
+		Backend: b,
 	}
 }
