@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 )
@@ -32,7 +33,8 @@ func (d *DiskBackend) Write(key Key, r io.Reader) {
 }
 
 func (d DiskBackend) Read(key Key) ([]byte, error) {
-	return []byte(""), nil
+	path := d.Root + key.AsPath() + "/data"
+	return ioutil.ReadFile(path)
 }
 
 func (d DiskBackend) Exists(key Key) bool {

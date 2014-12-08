@@ -13,6 +13,8 @@ func helloHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	fmt.Fprintf(w, "hello")
 }
 
+// read/write file requests that shall only touch
+// the current node. No cluster interaction.
 func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	parts := strings.Split(r.URL.String(), "/")
 	log.Printf("%d %s\n", len(parts), parts)
@@ -45,13 +47,24 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	}
 	if len(parts) == 4 {
 		key := parts[2]
-		fmt.Fprintf(w, fmt.Sprintf("retrieve file with key %s\n", parts[2]))
+		log.Printf("retrieve file with key %s\n", parts[2])
 		k, err := KeyFromString(key)
 		if err != nil {
-			fmt.Fprintf(w, "invalid key\n")
+			http.Error(w, "invalid key\n", 400)
 			return
 		}
-		fmt.Fprintf(w, k.String()+"\n")
+		if !s.Backend.Exists(*k) {
+			http.Error(w, "not found\n", 404)
+			return
+		}
+		data, err := s.Backend.Read(*k)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, "error reading file", 500)
+			return
+		}
+		w.Header().Set("Content-Type", "application/octet")
+		w.Write(data)
 	}
 }
 
