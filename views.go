@@ -21,7 +21,10 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	if len(parts) == 3 {
 		if r.Method == "POST" {
 			log.Println("write a file")
-
+			if !s.Node.Writeable {
+				http.Error(w, "this node is read-only", 503)
+				return
+			}
 			f, _, _ := r.FormFile("file")
 			defer f.Close()
 			h := sha1.New()
