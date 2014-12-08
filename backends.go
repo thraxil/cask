@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 )
 
@@ -22,7 +23,7 @@ func NewDiskBackend(root string) *DiskBackend {
 
 func (d *DiskBackend) Write(key Key, r io.Reader) {
 	path := d.Root + key.AsPath()
-	fmt.Printf("writing to %s\n", path)
+	log.Println(fmt.Sprintf("writing to %s\n", path))
 	os.MkdirAll(path, 0755)
 	fullpath := path + "/data"
 	f, _ := os.OpenFile(fullpath, os.O_CREATE|os.O_RDWR, 0644)
@@ -35,5 +36,9 @@ func (d DiskBackend) Read(key Key) ([]byte, error) {
 }
 
 func (d DiskBackend) Exists(key Key) bool {
+	path := d.Root + key.AsPath() + "/data"
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return false
+	}
 	return true
 }

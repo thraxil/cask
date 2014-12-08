@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -14,10 +15,10 @@ func helloHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 
 func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	parts := strings.Split(r.URL.String(), "/")
-	fmt.Fprintf(w, fmt.Sprintf("%d %s\n", len(parts), parts))
+	log.Printf("%d %s\n", len(parts), parts)
 	if len(parts) == 3 {
 		if r.Method == "POST" {
-			fmt.Fprintf(w, "write a file")
+			log.Println("write a file")
 
 			f, _, _ := r.FormFile("file")
 			defer f.Close()
@@ -28,9 +29,15 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 				http.Error(w, "bad hash", 500)
 				return
 			}
+			if s.Backend.Exists(*key) {
+				log.Println("already exists, don't need to do anything")
+				fmt.Fprintf(w, key.String())
+				return
+			}
 			f.Seek(0, 0)
 			s.Backend.Write(*key, f)
-			return key.String()
+			fmt.Fprintf(w, key.String())
+			return
 		} else {
 			fmt.Fprintf(w, "show form/handle post\n")
 			return
