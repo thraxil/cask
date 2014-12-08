@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/sha1"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -16,7 +18,19 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	if len(parts) == 3 {
 		if r.Method == "POST" {
 			fmt.Fprintf(w, "write a file")
-			return
+
+			f, _, _ := r.FormFile("file")
+			defer f.Close()
+			h := sha1.New()
+			io.Copy(h, f)
+			key, err := KeyFromString("sha1:" + fmt.Sprintf("%x", h.Sum(nil)))
+			if err != nil {
+				http.Error(w, "bad hash", 500)
+				return
+			}
+			f.Seek(0, 0)
+			s.Backend.Write(*key, f)
+			return key.String()
 		} else {
 			fmt.Fprintf(w, "show form/handle post\n")
 			return

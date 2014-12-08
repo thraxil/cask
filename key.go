@@ -41,7 +41,7 @@ func KeyFromString(str string) (*Key, error) {
 
 func (k Key) AsPath() string {
 	var parts []string
-	s := k.String()
+	s := string(k.Value)
 	for i := range s {
 		if (i % 2) != 0 {
 			parts = append(parts, s[i-1:i+1])

@@ -1,5 +1,5 @@
 run: cask .env
-	/bin/bash .env && ./cask
+	./run.sh
 
 cask: *.go
 	go build .
