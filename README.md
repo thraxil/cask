@@ -13,11 +13,11 @@ By default (for now), keys are SHA1 hashes of the files.
 Additionally, nodes in the cluster communicate with each other over
 HTTP.
 
-   POST /local/ --> post a file to this node. returns Key
-   GET /local/<Key>/ -> retrieve a file from this node by Key
-   POST /join/ -> add a node to the cluster
-   GET /info/ -> get JSON data about this node and its view of the
-                 cluster
+    POST /local/ --> post a file to this node. returns Key
+    GET /local/<Key>/ -> retrieve a file from this node by Key
+    POST /join/ -> add a node to the cluster
+    GET /info/ -> get JSON data about this node and its view of the
+                  cluster
 
 Features:
 
