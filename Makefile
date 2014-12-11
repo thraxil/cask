@@ -3,3 +3,6 @@ run: cask .env
 
 cask: *.go
 	go build .
+
+install_deps:
+	go get github.com/kelseyhightower/envconfig

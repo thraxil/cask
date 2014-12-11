@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
-	"os"
+
+	"github.com/kelseyhightower/envconfig"
 )
 
 func makeHandler(fn func(http.ResponseWriter, *http.Request, *Site), s *Site) http.HandlerFunc {
@@ -12,26 +14,34 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, *Site), s *Site) ht
 	}
 }
 
-func main() {
-	// get config from environment
-	w := os.Getenv("CASK_WRITEABLE") == "True"
-	uuid := os.Getenv("CASK_UUID")
-	base_url := os.Getenv("CASK_BASE_URL")
-	root := os.Getenv("CASK_DISK_BACKEND_ROOT")
+type Config struct {
+	Writeable       bool
+	BaseUrl         string `envconfig:"BASE_URL"`
+	UUID            string
+	DiskBackendRoot string `envconfig:"DISK_BACKEND_ROOT"`
+	Port            int
+}
 
-	n := NewNode(uuid, base_url, w)
-	backend := NewDiskBackend(root)
+func main() {
+	var c Config
+	err := envconfig.Process("cask", &c)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	n := NewNode(c.UUID, c.BaseUrl, c.Writeable)
+	backend := NewDiskBackend(c.DiskBackendRoot)
 	s := NewSite(n, backend)
 
 	log.Println("=== Cask Node starting ================")
-	log.Println("Root: " + root)
-	log.Println("UUID: " + uuid)
-	log.Println("Base URL: " + base_url)
+	log.Println("Root: " + c.DiskBackendRoot)
+	log.Println("UUID: " + c.UUID)
+	log.Println("Base URL: " + c.BaseUrl)
 	log.Println("=======================================")
 
 	http.HandleFunc("/", makeHandler(helloHandler, s))
 	http.HandleFunc("/local/", makeHandler(localHandler, s))
 	http.HandleFunc("/favicon.ico", faviconHandler)
 
-	log.Fatal(http.ListenAndServe(":"+os.Getenv("CASK_PORT"), nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", c.Port), nil))
 }
