@@ -31,7 +31,8 @@ func main() {
 
 	n := NewNode(c.UUID, c.BaseUrl, c.Writeable)
 	backend := NewDiskBackend(c.DiskBackendRoot)
-	s := NewSite(n, backend)
+	cluster := NewCluster(*n)
+	s := NewSite(n, cluster, backend)
 
 	log.Println("=== Cask Node starting ================")
 	log.Println("Root: " + c.DiskBackendRoot)
