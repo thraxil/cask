@@ -42,7 +42,10 @@ func main() {
 
 	http.HandleFunc("/", makeHandler(helloHandler, s))
 	http.HandleFunc("/local/", makeHandler(localHandler, s))
+	http.HandleFunc("/join/", makeHandler(joinHandler, s))
 	http.HandleFunc("/cluster/", makeHandler(clusterInfoHandler, s))
+	http.HandleFunc("/config/", makeHandler(configHandler, s))
+
 	http.HandleFunc("/favicon.ico", faviconHandler)
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", c.Port), nil))

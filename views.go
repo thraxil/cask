@@ -2,8 +2,10 @@ package main
 
 import (
 	"crypto/sha1"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
@@ -88,6 +90,61 @@ func clusterInfoHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	t.Execute(w, p)
 }
 
+func joinHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+	if r.Method == "POST" {
+		if r.FormValue("url") == "" {
+			fmt.Fprint(w, "no url specified")
+			return
+		}
+		url := r.FormValue("url")
+		config_url := url + "/config/"
+		res, err := http.Get(config_url)
+		if err != nil {
+			fmt.Fprint(w, "error retrieving config")
+			return
+		}
+		defer res.Body.Close()
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			fmt.Fprintf(w, "error reading body of response")
+			return
+		}
+		var n Node
+		err = json.Unmarshal(body, &n)
+		if err != nil {
+			fmt.Fprintf(w, "error parsing json")
+			return
+		}
+
+		if n.UUID == s.Node.UUID {
+			fmt.Fprintf(w, "I can't join myself, silly!")
+			return
+		}
+		_, ok := s.Cluster.FindNeighborByUUID(n.UUID)
+		if ok {
+			fmt.Fprintf(w, "already have a node with that UUID in the cluster")
+			// let's not do updates through this. Let gossip handle that.
+			return
+		}
+		s.Cluster.AddNeighbor(n)
+
+		fmt.Fprintf(w, fmt.Sprintf("Added node [%s]", n.UUID))
+
+	} else {
+		// show form
+		w.Write([]byte(join_template))
+	}
+}
+
+func configHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+	b, err := json.Marshal(s.Node)
+	if err != nil {
+		log.Println(err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(b)
+}
+
 func faviconHandler(w http.ResponseWriter, r *http.Request) {
 	// just ignore this crap
 }
@@ -116,6 +173,18 @@ const cluster_template = `
 </tr>
 {{end}}
 </table>
+</body>
+</html>
+`
+
+const join_template = `
+<html><head><title>Add Node</title></head>
+<body>
+<h1>Add Node</h1>
+<form action="." method="post">
+<input type="text" name="url" placeholder="Base URL" size="128" /><br />
+<input type="submit" value="add node" />
+</form>
 </body>
 </html>
 `
