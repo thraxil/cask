@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"text/template"
 )
 
 func helloHandler(w http.ResponseWriter, r *http.Request, s *Site) {
@@ -71,6 +72,50 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	}
 }
 
+type clusterInfoPage struct {
+	Title     string
+	Cluster   *Cluster
+	Neighbors []Node
+}
+
+func clusterInfoHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+	p := clusterInfoPage{
+		Title:     "cluster status",
+		Cluster:   s.Cluster,
+		Neighbors: s.Cluster.NeighborsInclusive(),
+	}
+	t, _ := template.New("cluster").Parse(cluster_template)
+	t.Execute(w, p)
+}
+
 func faviconHandler(w http.ResponseWriter, r *http.Request) {
 	// just ignore this crap
 }
+
+const cluster_template = `
+<html>
+<head>
+<title>{{.Title}}</title>
+</head>
+<body>
+<table border="1">
+<tr>
+<th>UUID</th>
+<th>Base</th>
+<th>Writeable</th>
+<th>LastSeen</th>
+<th>LastFailed</th>
+</tr>
+{{range .Neighbors}}
+<tr>
+<td>{{.UUID}}</td>
+<td>{{.BaseUrl}}</td>
+<td>{{.Writeable}}</td>
+<td>{{.LastSeen}}</td>
+<td>{{.LastFailed}}</td>
+</tr>
+{{end}}
+</table>
+</body>
+</html>
+`
