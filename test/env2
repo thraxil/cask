@@ -1,0 +1,6 @@
+export CASK_PORT=8082
+export CASK_BASE_URL=http://localhost:8082
+export CASK_UUID=f864ab85-2cd1-4cc7-a541-3e34ec6fc18f
+export CASK_WRITEABLE=true
+export CASK_BACKEND=disk
+export CASK_DISK_BACKEND_ROOT=/tmp/cask/

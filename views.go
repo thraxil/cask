@@ -130,6 +130,21 @@ func joinHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 		}
 		n.LastSeen = time.Now()
 		s.Cluster.AddNeighbor(n)
+		// join the node to all our neighbors too
+		for _, neighbor := range s.Cluster.GetNeighbors() {
+			if neighbor.UUID == n.UUID {
+				// obviously, skip the one we just added
+				continue
+			}
+			res, err = http.PostForm(neighbor.BaseUrl+"/join/",
+				url.Values{"url": {u}})
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				res.Body.Close()
+			}
+
+		}
 		// reciprocate
 		res, err = http.PostForm(n.BaseUrl+"/join/",
 			url.Values{"url": {s.Node.BaseUrl}})
