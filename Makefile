@@ -7,6 +7,5 @@ cask: *.go
 install_deps:
 	go get github.com/kelseyhightower/envconfig
 
-cluster: cask .env .env2
-	./run.sh&
-	./run2.sh
+cluster: cask
+	python run_cluster.py

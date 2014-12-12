@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 	"text/template"
+	"time"
 )
 
 func helloHandler(w http.ResponseWriter, r *http.Request, s *Site) {
@@ -126,6 +127,7 @@ func joinHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 			// let's not do updates through this. Let gossip handle that.
 			return
 		}
+		n.LastSeen = time.Now()
 		s.Cluster.AddNeighbor(n)
 
 		fmt.Fprintf(w, fmt.Sprintf("Added node [%s]", n.UUID))
