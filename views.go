@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"text/template"
 	"time"
@@ -97,8 +98,8 @@ func joinHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 			fmt.Fprint(w, "no url specified")
 			return
 		}
-		url := r.FormValue("url")
-		config_url := url + "/config/"
+		u := r.FormValue("url")
+		config_url := u + "/config/"
 		res, err := http.Get(config_url)
 		if err != nil {
 			fmt.Fprint(w, "error retrieving config")
@@ -129,6 +130,14 @@ func joinHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 		}
 		n.LastSeen = time.Now()
 		s.Cluster.AddNeighbor(n)
+		// reciprocate
+		res, err = http.PostForm(n.BaseUrl+"/join/",
+			url.Values{"url": {s.Node.BaseUrl}})
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		res.Body.Close()
 
 		fmt.Fprintf(w, fmt.Sprintf("Added node [%s]", n.UUID))
 
