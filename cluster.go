@@ -383,12 +383,6 @@ func (c *Cluster) Heartbeat() {
 			Writeable: c.Myself.Writeable,
 			Neighbors: neighbor_hbs,
 		}
-		j, err := json.Marshal(hb)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		log.Printf("%s\n", string(j))
 		for _, n := range neighbors {
 			n.SendHeartbeat(hb)
 		}

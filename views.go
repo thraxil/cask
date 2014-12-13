@@ -120,9 +120,14 @@ func heartbeatHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 			LastSeen: time.Now()}
 		s.Cluster.UpdateNeighbor(n)
 		for _, neighbor := range hb.Neighbors {
+			if neighbor.UUID == s.Node.UUID {
+				// skip ourselves as usual
+				continue
+			}
 			_, found := s.Cluster.FindNeighborByUUID(neighbor.UUID)
 			if !found {
 				log.Println("learned about a new neighbor via heartbeat")
+				log.Println(neighbor.UUID, neighbor.BaseUrl)
 				s.Cluster.JoinNeighbor(neighbor.BaseUrl)
 			}
 		}

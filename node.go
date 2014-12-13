@@ -77,5 +77,4 @@ func (n Node) SendHeartbeat(hb heartbeat) {
 	}
 	defer resp.Body.Close()
 	ioutil.ReadAll(resp.Body)
-	log.Println("sent heartbeat...")
 }
