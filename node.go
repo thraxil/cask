@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"time"
 )
@@ -28,8 +29,40 @@ func NewNode(uuid, base_url string, writeable bool) *Node {
 	}
 }
 
-func (n *Node) Stash(key Key) bool {
-	return true
+func (n Node) AddFileUrl() string {
+	return n.BaseUrl + "/local/"
+}
+
+func (n *Node) AddFile(key Key, f multipart.File) bool {
+	resp, err := postFile(f, n.AddFileUrl())
+	if err != nil {
+		log.Println("postFile returned false")
+		return false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		log.Println("didn't get a 200")
+		return false
+	}
+
+	b, _ := ioutil.ReadAll(resp.Body)
+	// make sure it saved it as the same key
+	return string(b) == key.String()
+}
+
+func postFile(f io.Reader, target_url string) (*http.Response, error) {
+	body_buf := bytes.NewBufferString("")
+	body_writer := multipart.NewWriter(body_buf)
+	file_writer, err := body_writer.CreateFormFile("file", "file.dat")
+	if err != nil {
+		panic(err.Error())
+	}
+	io.Copy(file_writer, f)
+	// .Close() finishes setting it up
+	// do not defer this or it will make and empty POST request
+	body_writer.Close()
+	content_type := body_writer.FormDataContentType()
+	return http.Post(target_url, content_type, body_buf)
 }
 
 func (n Node) HashKeys() []string {

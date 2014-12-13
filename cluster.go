@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"sort"
@@ -170,35 +171,6 @@ func (c Cluster) WriteRing() RingEntryList {
 	return neighborsToRing(c.WriteableNeighbors())
 }
 
-func (cluster *Cluster) Stash(key Key, replication int, min_replication int) []string {
-	// we don't have the full-size, so check the cluster
-	nodes_to_check := cluster.WriteOrder(key.String())
-	saved_to := make([]string, replication)
-	var save_count = 0
-	// TODO: parallelize this
-	for _, n := range nodes_to_check {
-		// TODO: detect when the node to stash to is the current one
-		// and just save directly instead of doing a POST to ourself
-		if n.Stash(key) {
-			saved_to[save_count] = n.UUID
-			save_count++
-			n.LastSeen = time.Now()
-			cluster.UpdateNeighbor(n)
-		} else {
-			cluster.FailedNeighbor(n)
-		}
-		// TODO: if we've hit min_replication, we can return
-		// immediately and leave any additional stash attempts
-		// as background processes
-		// that node didn't have it so we keep going
-		if save_count >= replication {
-			// got as many as we need
-			break
-		}
-	}
-	return saved_to
-}
-
 func neighborsToRing(neighbors []Node) RingEntryList {
 	keys := make(RingEntryList, REPLICAS*len(neighbors))
 	for i := range neighbors {
@@ -293,6 +265,25 @@ func (c *Cluster) Retrieve(key Key) ([]byte, error) {
 		// that node didn't have it so we keep going
 	}
 	return nil, errors.New("not found in the cluster")
+}
+
+func (c *Cluster) AddFile(key Key, f multipart.File, replication int, min_replication int) bool {
+	nodes := c.WriteOrder(key.String())
+	var save_count = 0
+	for _, n := range nodes {
+		if n.AddFile(key, f) {
+			save_count++
+			n.LastSeen = time.Now()
+			c.UpdateNeighbor(n)
+		} else {
+			c.FailedNeighbor(n)
+		}
+		f.Seek(0, 0)
+		if save_count > replication {
+			break
+		}
+	}
+	return save_count >= min_replication
 }
 
 func (c *Cluster) JoinNeighbor(u string) (*Node, error) {

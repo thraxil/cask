@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"path/filepath"
 	"strings"
 )
@@ -34,6 +35,7 @@ func KeyFromString(str string) (*Key, error) {
 	}
 	str = parts[1]
 	if len(str) != 40 {
+		log.Println(str)
 		return nil, errors.New("invalid key")
 	}
 	return &Key{algorithm, []byte(str)}, nil

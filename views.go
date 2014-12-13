@@ -100,8 +100,38 @@ func clusterInfoHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	t.Execute(w, p)
 }
 
-func postFileHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+var DEFAULT_REPLICATION = 3
+var MIN_REPLICATION = 1
 
+type postResponse struct {
+	Key     string `json:"key"`
+	Success bool   `json:"success"`
+}
+
+func postFileHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+	log.Println("add a file")
+
+	f, _, _ := r.FormFile("file")
+	defer f.Close()
+	h := sha1.New()
+	io.Copy(h, f)
+	key, err := KeyFromString("sha1:" + fmt.Sprintf("%x", h.Sum(nil)))
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "bad hash", 500)
+		return
+	}
+	f.Seek(0, 0)
+	success := s.Cluster.AddFile(*key, f, DEFAULT_REPLICATION, MIN_REPLICATION)
+	pr := postResponse{
+		Key:     key.String(),
+		Success: success,
+	}
+	b, err := json.Marshal(pr)
+	if err != nil {
+		http.Error(w, "json error", 500)
+	}
+	w.Write(b)
 }
 
 func joinHandler(w http.ResponseWriter, r *http.Request, s *Site) {
