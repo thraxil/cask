@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -22,6 +22,7 @@ type Cluster struct {
 }
 
 func NewCluster(myself Node) *Cluster {
+	rand.Seed(time.Now().UnixNano())
 	c := &Cluster{
 		Myself:    myself,
 		neighbors: make(map[string]Node),
@@ -330,7 +331,7 @@ func (c *Cluster) JoinNeighbor(u string) (*Node, error) {
 		res, err = http.PostForm(neighbor.BaseUrl+"/join/",
 			url.Values{"url": {u}})
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		} else {
 			res.Body.Close()
 		}
@@ -355,4 +356,45 @@ func (c *Cluster) BootstrapNeighbors(neighbors string) {
 		// ignore any results/errors
 		c.JoinNeighbor(n)
 	}
+}
+
+type heartbeat struct {
+	UUID      string `json:"uuid"`
+	BaseUrl   string `json:"base_url"`
+	Writeable bool   `json:"writeable"`
+
+	Neighbors []node_heartbeat `json:"neighbors"`
+}
+
+func (c *Cluster) Heartbeat() {
+	base_time := 60
+	for {
+		jitter := rand.Intn(5)
+		time.Sleep(time.Duration(base_time+jitter) * time.Second)
+		log.Println(c.Myself.UUID + " * heartbeat *")
+		neighbors := c.GetNeighbors()
+		neighbor_hbs := make([]node_heartbeat, len(neighbors))
+		for i, n := range neighbors {
+			neighbor_hbs[i] = n.NodeHeartbeat()
+		}
+		var hb = heartbeat{
+			UUID:      c.Myself.UUID,
+			BaseUrl:   c.Myself.BaseUrl,
+			Writeable: c.Myself.Writeable,
+			Neighbors: neighbor_hbs,
+		}
+		j, err := json.Marshal(hb)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		log.Printf("%s\n", string(j))
+		for _, n := range neighbors {
+			n.SendHeartbeat(hb)
+		}
+	}
+}
+
+func (c *Cluster) ActiveAntiEntropy() {
+
 }

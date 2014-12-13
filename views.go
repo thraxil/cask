@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"text/template"
+	"time"
 )
 
 // read/write file requests that shall only touch
@@ -103,6 +104,30 @@ func joinHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	} else {
 		// show form
 		w.Write([]byte(join_template))
+	}
+}
+
+func heartbeatHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+	if r.Method == "POST" {
+		decoder := json.NewDecoder(r.Body)
+		var hb heartbeat
+		err := decoder.Decode(&hb)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+		}
+		n := Node{
+			UUID: hb.UUID, BaseUrl: hb.BaseUrl, Writeable: hb.Writeable,
+			LastSeen: time.Now()}
+		s.Cluster.UpdateNeighbor(n)
+		for _, neighbor := range hb.Neighbors {
+			_, found := s.Cluster.FindNeighborByUUID(neighbor.UUID)
+			if !found {
+				log.Println("learned about a new neighbor via heartbeat")
+				s.Cluster.JoinNeighbor(neighbor.BaseUrl)
+			}
+		}
+	} else {
+		http.Error(w, "method not allowed", 405)
 	}
 }
 

@@ -37,6 +37,8 @@ func main() {
 	if c.Neighbors != "" {
 		go cluster.BootstrapNeighbors(c.Neighbors)
 	}
+	go cluster.Heartbeat()
+	go cluster.ActiveAntiEntropy()
 
 	log.Println("=== Cask Node starting ================")
 	log.Println("Root: " + c.DiskBackendRoot)
@@ -48,6 +50,7 @@ func main() {
 	http.HandleFunc("/local/", makeHandler(localHandler, s))
 	http.HandleFunc("/join/", makeHandler(joinHandler, s))
 	http.HandleFunc("/config/", makeHandler(configHandler, s))
+	http.HandleFunc("/heartbeat/", makeHandler(heartbeatHandler, s))
 
 	http.HandleFunc("/favicon.ico", faviconHandler)
 

@@ -1,9 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha1"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"time"
 )
 
@@ -41,4 +46,36 @@ func (n Node) HashKeys() []string {
 func (n *Node) Retrieve(key Key) ([]byte, error) {
 	b := make([]byte, 0)
 	return b, nil
+}
+
+type node_heartbeat struct {
+	UUID      string `json:"uuid"`
+	BaseUrl   string `json:"base_url"`
+	Writeable bool   `json:"writeable"`
+}
+
+func (n Node) NodeHeartbeat() node_heartbeat {
+	return node_heartbeat{UUID: n.UUID, BaseUrl: n.BaseUrl, Writeable: n.Writeable}
+}
+
+func (n Node) HeartbeatUrl() string {
+	return n.BaseUrl + "/heartbeat/"
+}
+
+func (n Node) SendHeartbeat(hb heartbeat) {
+	j, err := json.Marshal(hb)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	req, err := http.NewRequest("POST", n.HeartbeatUrl(), bytes.NewBuffer(j))
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	ioutil.ReadAll(resp.Body)
+	log.Println("sent heartbeat...")
 }
