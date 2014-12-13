@@ -40,10 +40,9 @@ func main() {
 	log.Println("Base URL: " + c.BaseUrl)
 	log.Println("=======================================")
 
-	http.HandleFunc("/", makeHandler(helloHandler, s))
+	http.HandleFunc("/", makeHandler(clusterInfoHandler, s))
 	http.HandleFunc("/local/", makeHandler(localHandler, s))
 	http.HandleFunc("/join/", makeHandler(joinHandler, s))
-	http.HandleFunc("/cluster/", makeHandler(clusterInfoHandler, s))
 	http.HandleFunc("/config/", makeHandler(configHandler, s))
 
 	http.HandleFunc("/favicon.ico", faviconHandler)

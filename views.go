@@ -14,10 +14,6 @@ import (
 	"time"
 )
 
-func helloHandler(w http.ResponseWriter, r *http.Request, s *Site) {
-	fmt.Fprintf(w, "hello")
-}
-
 // read/write file requests that shall only touch
 // the current node. No cluster interaction.
 func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
