@@ -5,8 +5,9 @@ a more useful system on top of (eg, see [Reticulum](http://thraxil.github.io/ret
 The simple public interface for any node in the cluster is:
 
     POST / --> post a file to the cluster. returns Key
+		GET / -> show basic info about the node/cluster
     GET /file/<Key>/ -> retrieve a file based on the Key
-    GET /status/ -> show node/cluster status
+    GET /status/ -> show node/cluster status (JSON)
 
 By default (for now), keys are SHA1 hashes of the files.
 
@@ -18,6 +19,8 @@ HTTP.
     POST /join/ -> add a node to the cluster
     GET /info/ -> get JSON data about this node and its view of the
                   cluster
+    POST /heartbeat/ -> tell the node that I (another node) am alive
+                        and well.
 
 Features:
 

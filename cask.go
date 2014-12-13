@@ -46,7 +46,7 @@ func main() {
 	log.Println("Base URL: " + c.BaseUrl)
 	log.Println("=======================================")
 
-	http.HandleFunc("/", makeHandler(clusterInfoHandler, s))
+	http.HandleFunc("/", makeHandler(indexHandler, s))
 	http.HandleFunc("/local/", makeHandler(localHandler, s))
 	http.HandleFunc("/join/", makeHandler(joinHandler, s))
 	http.HandleFunc("/config/", makeHandler(configHandler, s))

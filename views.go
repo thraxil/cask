@@ -77,6 +77,18 @@ type clusterInfoPage struct {
 	Neighbors []Node
 }
 
+func indexHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+	if r.Method == "GET" {
+		clusterInfoHandler(w, r, s)
+		return
+	}
+	if r.Method == "POST" {
+		postFileHandler(w, r, s)
+		return
+	}
+	http.Error(w, "method not supported", 405)
+}
+
 func clusterInfoHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	p := clusterInfoPage{
 		Title:     "cluster status",
@@ -86,6 +98,10 @@ func clusterInfoHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	}
 	t, _ := template.New("cluster").Parse(cluster_template)
 	t.Execute(w, p)
+}
+
+func postFileHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+
 }
 
 func joinHandler(w http.ResponseWriter, r *http.Request, s *Site) {
