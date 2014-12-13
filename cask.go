@@ -20,6 +20,7 @@ type Config struct {
 	UUID            string
 	DiskBackendRoot string `envconfig:"DISK_BACKEND_ROOT"`
 	Port            int
+	Neighbors       string
 }
 
 func main() {
@@ -33,6 +34,9 @@ func main() {
 	backend := NewDiskBackend(c.DiskBackendRoot)
 	cluster := NewCluster(*n)
 	s := NewSite(n, cluster, backend)
+	if c.Neighbors != "" {
+		go cluster.BootstrapNeighbors(c.Neighbors)
+	}
 
 	log.Println("=== Cask Node starting ================")
 	log.Println("Root: " + c.DiskBackendRoot)

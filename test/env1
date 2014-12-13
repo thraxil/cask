@@ -4,3 +4,4 @@ export CASK_UUID=ead52d6c-f423-4c0a-a762-37bacac88d4f
 export CASK_WRITEABLE=true
 export CASK_BACKEND=disk
 export CASK_DISK_BACKEND_ROOT=/tmp/cask2/
+export CASK_NEIGHBORS=http://localhost:8080,http://localhost:8082

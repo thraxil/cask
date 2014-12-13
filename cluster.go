@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -341,4 +343,16 @@ func (c *Cluster) JoinNeighbor(u string) (*Node, error) {
 	}
 	res.Body.Close()
 	return &n, nil
+}
+
+func (c *Cluster) BootstrapNeighbors(neighbors string) {
+	// wait a few seconds for other nodes to hopefully
+	// have started up
+	jitter := rand.Intn(5)
+	time.Sleep(time.Duration(jitter) * time.Second)
+
+	for _, n := range strings.Split(neighbors, ",") {
+		// ignore any results/errors
+		c.JoinNeighbor(n)
+	}
 }
