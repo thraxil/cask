@@ -5,13 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 	"text/template"
-	"time"
 )
 
 // read/write file requests that shall only touch
@@ -97,63 +94,12 @@ func joinHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 			return
 		}
 		u := r.FormValue("url")
-		config_url := u + "/config/"
-		res, err := http.Get(config_url)
+		n, err := s.Cluster.JoinNeighbor(u)
 		if err != nil {
-			fmt.Fprint(w, "error retrieving config")
+			fmt.Fprint(w, err)
 			return
 		}
-		defer res.Body.Close()
-		body, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			fmt.Fprintf(w, "error reading body of response")
-			return
-		}
-		var n Node
-		err = json.Unmarshal(body, &n)
-		if err != nil {
-			fmt.Fprintf(w, "error parsing json")
-			return
-		}
-
-		if n.UUID == s.Node.UUID {
-			fmt.Fprintf(w, "I can't join myself, silly!")
-			return
-		}
-		_, ok := s.Cluster.FindNeighborByUUID(n.UUID)
-		if ok {
-			fmt.Fprintf(w, "already have a node with that UUID in the cluster")
-			// let's not do updates through this. Let gossip handle that.
-			return
-		}
-		n.LastSeen = time.Now()
-		s.Cluster.AddNeighbor(n)
-		// join the node to all our neighbors too
-		for _, neighbor := range s.Cluster.GetNeighbors() {
-			if neighbor.UUID == n.UUID {
-				// obviously, skip the one we just added
-				continue
-			}
-			res, err = http.PostForm(neighbor.BaseUrl+"/join/",
-				url.Values{"url": {u}})
-			if err != nil {
-				fmt.Println(err)
-			} else {
-				res.Body.Close()
-			}
-
-		}
-		// reciprocate
-		res, err = http.PostForm(n.BaseUrl+"/join/",
-			url.Values{"url": {s.Node.BaseUrl}})
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		res.Body.Close()
-
 		fmt.Fprintf(w, fmt.Sprintf("Added node [%s]", n.UUID))
-
 	} else {
 		// show form
 		w.Write([]byte(join_template))

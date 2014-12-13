@@ -1,7 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"sort"
 	"time"
 )
@@ -285,4 +290,55 @@ func (c *Cluster) Retrieve(key Key) ([]byte, error) {
 		// that node didn't have it so we keep going
 	}
 	return nil, errors.New("not found in the cluster")
+}
+
+func (c *Cluster) JoinNeighbor(u string) (*Node, error) {
+	config_url := u + "/config/"
+	res, err := http.Get(config_url)
+	if err != nil {
+		return nil, errors.New("error retrieving config")
+	}
+	defer res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, errors.New("error reading body of response")
+	}
+	var n Node
+	err = json.Unmarshal(body, &n)
+	if err != nil {
+		return nil, errors.New("error parsing json")
+	}
+
+	if n.UUID == c.Myself.UUID {
+		return nil, errors.New("I can't join myself, silly!")
+	}
+	_, ok := c.FindNeighborByUUID(n.UUID)
+	if ok {
+		// let's not do updates through this. Let gossip handle that.
+		return nil, errors.New("already have a node with that UUID in the cluster")
+	}
+	n.LastSeen = time.Now()
+	c.AddNeighbor(n)
+	// join the node to all our neighbors too
+	for _, neighbor := range c.GetNeighbors() {
+		if neighbor.UUID == n.UUID {
+			// obviously, skip the one we just added
+			continue
+		}
+		res, err = http.PostForm(neighbor.BaseUrl+"/join/",
+			url.Values{"url": {u}})
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			res.Body.Close()
+		}
+	}
+	// reciprocate
+	res, err = http.PostForm(n.BaseUrl+"/join/",
+		url.Values{"url": {c.Myself.BaseUrl}})
+	if err != nil {
+		return nil, err
+	}
+	res.Body.Close()
+	return &n, nil
 }
