@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -76,8 +77,20 @@ func (n Node) HashKeys() []string {
 	return keys
 }
 
+func (n Node) retrieveUrl(key Key) string {
+	return n.BaseUrl + "/local/" + key.String() + "/"
+}
+
 func (n *Node) Retrieve(key Key) ([]byte, error) {
-	b := make([]byte, 0)
+	resp, err := http.Get(n.retrieveUrl(key))
+	defer resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	if resp.Status != "200 OK" {
+		return nil, errors.New("404, probably")
+	}
+	b, _ := ioutil.ReadAll(resp.Body)
 	return b, nil
 }
 

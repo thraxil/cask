@@ -70,6 +70,45 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	}
 }
 
+func serveDirect(w http.ResponseWriter, key Key, s *Site) bool {
+	if !s.Backend.Exists(key) {
+		return false
+	}
+	data, err := s.Backend.Read(key)
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+	w.Header().Set("Content-Type", "application/octet")
+	w.Write(data)
+	log.Println("served direct")
+	return true
+}
+
+func fileHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+	parts := strings.Split(r.URL.String(), "/")
+	log.Printf("%d %s\n", len(parts), parts)
+	if len(parts) == 4 {
+		key := parts[2]
+		log.Printf("get file with key %s\n", parts[2])
+		k, err := KeyFromString(key)
+		if err != nil {
+			http.Error(w, "invalid key\n", 400)
+			return
+		}
+		if serveDirect(w, *k, s) {
+			return
+		}
+		data, err := s.Cluster.Retrieve(*k)
+		if err != nil {
+			http.Error(w, "not found", 404)
+		}
+		w.Write(data)
+	} else {
+		http.Error(w, "bad request", 400)
+	}
+}
+
 type clusterInfoPage struct {
 	Title     string
 	Cluster   *Cluster

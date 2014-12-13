@@ -257,11 +257,14 @@ func (c *Cluster) Retrieve(key Key) ([]byte, error) {
 			// checking ourself would be silly
 			continue
 		}
+		log.Printf("ask node %s for it\n", n.UUID)
 		f, err := n.Retrieve(key)
 		if err == nil {
 			// got it, return it
+			log.Println("   they had it")
 			return f, nil
 		}
+		log.Println("   they didn't have it. try another")
 		// that node didn't have it so we keep going
 	}
 	return nil, errors.New("not found in the cluster")
