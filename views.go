@@ -75,6 +75,7 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 type clusterInfoPage struct {
 	Title     string
 	Cluster   *Cluster
+	Myself    *Node
 	Neighbors []Node
 }
 
@@ -82,6 +83,7 @@ func clusterInfoHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	p := clusterInfoPage{
 		Title:     "cluster status",
 		Cluster:   s.Cluster,
+		Myself:    s.Node,
 		Neighbors: s.Cluster.NeighborsInclusive(),
 	}
 	t, _ := template.New("cluster").Parse(cluster_template)
@@ -177,6 +179,12 @@ const cluster_template = `
 <title>{{.Title}}</title>
 </head>
 <body>
+<h2>Node: {{.Myself.UUID}}</h2>
+<table>
+<tr><th>Base</th><td>{{.Myself.BaseUrl}}</td></tr>
+<tr><th>Writeable</th><td>{{.Myself.Writeable}}</td></tr>
+</table>
+<h2>cluster status</h2>
 <table border="1">
 <tr>
 <th>UUID</th>
@@ -188,7 +196,7 @@ const cluster_template = `
 {{range .Neighbors}}
 <tr>
 <td>{{.UUID}}</td>
-<td>{{.BaseUrl}}</td>
+<td><a href="{{.BaseUrl}}">{{.BaseUrl}}</a></td>
 <td>{{.Writeable}}</td>
 <td>{{.LastSeen}}</td>
 <td>{{.LastFailed}}</td>
@@ -196,6 +204,12 @@ const cluster_template = `
 {{end}}
 </table>
 </body>
+
+<ul>
+<li><a href="/join/">Add a node manually</a></li>
+<li><a href="/config/">JSON config data</a></li>
+</ul>
+
 </html>
 `
 
