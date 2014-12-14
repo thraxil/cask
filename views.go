@@ -70,6 +70,28 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	}
 }
 
+func infoHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+	parts := strings.Split(r.URL.String(), "/")
+	log.Printf("%d %s\n", len(parts), parts)
+	if len(parts) == 4 {
+		key := parts[2]
+		log.Printf("retrieve file info for key %s\n", parts[2])
+		k, err := KeyFromString(key)
+		if err != nil {
+			http.Error(w, "invalid key\n", 400)
+			return
+		}
+		exists := s.Backend.Exists(*k)
+		ir := InfoResponse{Key: k.String(), Local: exists}
+		b, err := json.Marshal(ir)
+		if err != nil {
+			http.Error(w, "error serializing json", 500)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(b)
+	}
+}
+
 func serveDirect(w http.ResponseWriter, key Key, s *Site) bool {
 	if !s.Backend.Exists(key) {
 		return false

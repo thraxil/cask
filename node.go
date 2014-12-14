@@ -34,7 +34,7 @@ func (n Node) AddFileUrl() string {
 	return n.BaseUrl + "/local/"
 }
 
-func (n *Node) AddFile(key Key, f multipart.File) bool {
+func (n *Node) AddFile(key Key, f io.Reader) bool {
 	resp, err := postFile(f, n.AddFileUrl())
 	if err != nil {
 		log.Println("postFile returned false")
@@ -92,6 +92,69 @@ func (n *Node) Retrieve(key Key) ([]byte, error) {
 	}
 	b, _ := ioutil.ReadAll(resp.Body)
 	return b, nil
+}
+
+func (n Node) retrieveInfoUrl(key Key) string {
+	return n.BaseUrl + "/info/%s" + key.String() + "/"
+}
+
+type InfoResponse struct {
+	Key   string `json:"key"`
+	Local bool   `json:"local"`
+}
+
+type pingResponse struct {
+	Resp *http.Response
+	Err  error
+}
+
+func timedGetRequest(url string, duration time.Duration) (resp *http.Response, err error) {
+	rc := make(chan pingResponse, 1)
+	go func() {
+		resp, err := http.Get(url)
+		rc <- pingResponse{resp, err}
+	}()
+	select {
+	case pr := <-rc:
+		resp = pr.Resp
+		err = pr.Err
+	case <-time.After(duration):
+		err = errors.New("GET request timed out")
+	}
+	return
+}
+
+func (n *Node) RetrieveInfo(key Key) (*InfoResponse, error) {
+	url := n.retrieveInfoUrl(key)
+	resp, err := timedGetRequest(url, 1*time.Second)
+	if err != nil {
+		n.LastFailed = time.Now()
+		return nil, err
+	}
+
+	// otherwise, we got the info
+	n.LastSeen = time.Now()
+	return n.processRetrieveInfoResponse(resp)
+}
+
+func (n *Node) processRetrieveInfoResponse(resp *http.Response) (*InfoResponse, error) {
+	if resp == nil {
+		return nil, errors.New("nil response")
+	}
+	defer resp.Body.Close()
+	if resp.Status != "200 OK" {
+		return nil, errors.New("404, probably")
+	}
+	var response InfoResponse
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(b, &response)
+	if err != nil {
+		return nil, err
+	}
+	return &response, nil
 }
 
 type node_heartbeat struct {

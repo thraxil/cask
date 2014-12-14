@@ -17,6 +17,7 @@ type Backend interface {
 	Write(key Key, r io.Reader)
 	Read(key Key) ([]byte, error)
 	Exists(key Key) bool
+	Delete(key Key) error
 	ActiveAntiEntropy(cluster *Cluster)
 }
 
@@ -49,6 +50,11 @@ func (d DiskBackend) Exists(key Key) bool {
 		return false
 	}
 	return true
+}
+
+func (d DiskBackend) Delete(key Key) error {
+	path := d.Root + key.AsPath()
+	return os.RemoveAll(path)
 }
 
 // the only File methods that we care about
