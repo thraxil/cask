@@ -365,7 +365,7 @@ func (c *Cluster) Heartbeat() {
 	for {
 		jitter := rand.Intn(5)
 		time.Sleep(time.Duration(base_time+jitter) * time.Second)
-		log.Println(c.Myself.UUID + " * heartbeat *")
+		log.Println(" * heartbeat " + c.Myself.UUID + " *")
 		neighbors := c.GetNeighbors()
 		neighbor_hbs := make([]node_heartbeat, len(neighbors))
 		for i, n := range neighbors {
@@ -381,8 +381,4 @@ func (c *Cluster) Heartbeat() {
 			n.SendHeartbeat(hb)
 		}
 	}
-}
-
-func (c *Cluster) ActiveAntiEntropy() {
-
 }

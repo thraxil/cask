@@ -38,7 +38,7 @@ func main() {
 		go cluster.BootstrapNeighbors(c.Neighbors)
 	}
 	go cluster.Heartbeat()
-	go cluster.ActiveAntiEntropy()
+	go s.ActiveAntiEntropy()
 
 	log.Println("=== Cask Node starting ================")
 	log.Println("Root: " + c.DiskBackendRoot)
