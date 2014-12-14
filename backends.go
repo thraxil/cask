@@ -89,6 +89,54 @@ func verify(path string, key Key, h string, c *Cluster) error {
 		return nil
 	}
 	log.Printf("corrupted file %s\n", path)
+	repaired, err := repair_file(path, key, c)
+	if err != nil {
+		log.Printf("error trying to repair file")
+		return err
+	}
+	if repaired {
+		log.Printf("successfully repaired file")
+		return nil
+	}
+	return errors.New("unrepairable file")
+}
+
+func repair_file(path string, key Key, c *Cluster) (bool, error) {
+	nodes_to_check := c.ReadOrder(key.String())
+	for _, n := range nodes_to_check {
+		if n.UUID == c.Myself.UUID {
+			// we know we are corrupt, so skip ourselves
+			continue
+		}
+		found, f, err := n.CheckFile(key)
+		if found && err == nil {
+			err := replaceFile(path, f)
+			if err != nil {
+				log.Println("error replacing the file")
+				continue
+			}
+			return true, nil
+		}
+		// no luck with this node, try the next
+	}
+
+	// none of the nodes have a good copy. we're out of luck.
+	return false, errors.New("no good copies found")
+}
+
+func replaceFile(path string, file []byte) error {
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		log.Println("couldn't open for writing")
+		f.Close()
+		return err
+	}
+	_, err = f.Write(file)
+	f.Close()
+	if err != nil {
+		log.Println("couldn't write file")
+		return err
+	}
 	return nil
 }
 

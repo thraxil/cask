@@ -124,3 +124,25 @@ func (n Node) SendHeartbeat(hb heartbeat) {
 	defer resp.Body.Close()
 	ioutil.ReadAll(resp.Body)
 }
+
+// get file with specified key from the node
+// return (found, file content, error)
+func (n Node) CheckFile(key Key) (bool, []byte, error) {
+	f, err := n.Retrieve(key)
+	if err != nil {
+		// node doesn't have it
+		return false, nil, nil
+	}
+	if !doublecheck_replica(f, key) {
+		// that node had a bad copy as well
+		return true, nil, errors.New("corrupt")
+	}
+	return true, f, nil
+}
+
+func doublecheck_replica(f []byte, key Key) bool {
+	hn := sha1.New()
+	io.WriteString(hn, string(f))
+	nhash := fmt.Sprintf("%x", hn.Sum(nil))
+	return "sha1:"+nhash == key.String()
+}
