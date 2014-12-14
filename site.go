@@ -20,5 +20,5 @@ func NewSite(n *Node, c *Cluster, b Backend) *Site {
 
 func (s Site) ActiveAntiEntropy() {
 	// it's the backend's responsibility
-	s.Backend.ActiveAntiEntropy(s.Cluster)
+	s.Backend.ActiveAntiEntropy(s.Cluster, s)
 }

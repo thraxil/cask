@@ -18,7 +18,7 @@ type Backend interface {
 	Read(key Key) ([]byte, error)
 	Exists(key Key) bool
 	Delete(key Key) error
-	ActiveAntiEntropy(cluster *Cluster)
+	ActiveAntiEntropy(cluster *Cluster, site Site)
 }
 
 type DiskBackend struct {
@@ -146,7 +146,7 @@ func replaceFile(path string, file []byte) error {
 	return nil
 }
 
-func visit(path string, f os.FileInfo, err error, c *Cluster) error {
+func visit(path string, f os.FileInfo, err error, c *Cluster, s Site) error {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("Error in active anti-entropy.visit() [%s] %s\n", c.Myself.UUID, path)
@@ -185,6 +185,11 @@ func visit(path string, f os.FileInfo, err error, c *Cluster) error {
 	}
 
 	// rebalance
+	r := NewRebalancer(path, *key, c, s)
+	err = r.Rebalance()
+	if err != nil {
+		return err
+	}
 
 	// slow things down a little to keep server load down
 	var base_time = 10
@@ -193,17 +198,17 @@ func visit(path string, f os.FileInfo, err error, c *Cluster) error {
 	return nil
 }
 
-func makeVisitor(fn func(string, os.FileInfo, error, *Cluster) error,
-	c *Cluster) func(path string, f os.FileInfo, err error) error {
+func makeVisitor(fn func(string, os.FileInfo, error, *Cluster, Site) error,
+	c *Cluster, s Site) func(path string, f os.FileInfo, err error) error {
 	return func(path string, f os.FileInfo, err error) error {
-		return fn(path, f, err, c)
+		return fn(path, f, err, c, s)
 	}
 }
 
-func (d DiskBackend) ActiveAntiEntropy(cluster *Cluster) {
+func (d DiskBackend) ActiveAntiEntropy(cluster *Cluster, site Site) {
 	for {
 		log.Println("active anti-entropy starting at the top")
-		err := filepath.Walk(d.Root, makeVisitor(visit, cluster))
+		err := filepath.Walk(d.Root, makeVisitor(visit, cluster, site))
 		if err != nil {
 			log.Printf("filepath.Walk() returned %v\n", err)
 		}
