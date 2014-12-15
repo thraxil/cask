@@ -16,7 +16,6 @@ import (
 // the current node. No cluster interaction.
 func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	parts := strings.Split(r.URL.String(), "/")
-	log.Printf("%d %s\n", len(parts), parts)
 	if len(parts) == 3 {
 		if r.Method == "POST" {
 			log.Println("write a file")
@@ -49,7 +48,7 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	}
 	if len(parts) == 4 {
 		key := parts[2]
-		log.Printf("retrieve file with key %s\n", parts[2])
+		log.Printf("%s /local/%s/\n", r.Method, parts[2])
 		k, err := KeyFromString(key)
 		if err != nil {
 			http.Error(w, "invalid key\n", 400)
@@ -59,36 +58,20 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 			http.Error(w, "not found\n", 404)
 			return
 		}
-		data, err := s.Backend.Read(*k)
-		if err != nil {
-			log.Println(err)
-			http.Error(w, "error reading file", 500)
+		if r.Method == "HEAD" {
+			w.WriteHeader(200)
 			return
 		}
-		w.Header().Set("Content-Type", "application/octet")
-		w.Write(data)
-	}
-}
-
-func infoHandler(w http.ResponseWriter, r *http.Request, s *Site) {
-	parts := strings.Split(r.URL.String(), "/")
-	log.Printf("%d %s\n", len(parts), parts)
-	if len(parts) == 4 {
-		key := parts[2]
-		log.Printf("retrieve file info for key %s\n", parts[2])
-		k, err := KeyFromString(key)
-		if err != nil {
-			http.Error(w, "invalid key\n", 400)
-			return
+		if r.Method == "GET" {
+			data, err := s.Backend.Read(*k)
+			if err != nil {
+				log.Println(err)
+				http.Error(w, "error reading file", 500)
+				return
+			}
+			w.Header().Set("Content-Type", "application/octet")
+			w.Write(data)
 		}
-		exists := s.Backend.Exists(*k)
-		ir := InfoResponse{Key: k.String(), Local: exists}
-		b, err := json.Marshal(ir)
-		if err != nil {
-			http.Error(w, "error serializing json", 500)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(b)
 	}
 }
 
@@ -109,10 +92,9 @@ func serveDirect(w http.ResponseWriter, key Key, s *Site) bool {
 
 func fileHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	parts := strings.Split(r.URL.String(), "/")
-	log.Printf("%d %s\n", len(parts), parts)
 	if len(parts) == 4 {
 		key := parts[2]
-		log.Printf("get file with key %s\n", parts[2])
+		log.Printf("%s /file/%s/\n", r.Method, parts[2])
 		k, err := KeyFromString(key)
 		if err != nil {
 			http.Error(w, "invalid key\n", 400)

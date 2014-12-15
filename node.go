@@ -95,12 +95,7 @@ func (n *Node) Retrieve(key Key) ([]byte, error) {
 }
 
 func (n Node) retrieveInfoUrl(key Key) string {
-	return n.BaseUrl + "/info/" + key.String() + "/"
-}
-
-type InfoResponse struct {
-	Key   string `json:"key"`
-	Local bool   `json:"local"`
+	return n.BaseUrl + "/local/" + key.String() + "/"
 }
 
 type pingResponse struct {
@@ -108,10 +103,10 @@ type pingResponse struct {
 	Err  error
 }
 
-func timedGetRequest(url string, duration time.Duration) (resp *http.Response, err error) {
+func timedHeadRequest(url string, duration time.Duration) (resp *http.Response, err error) {
 	rc := make(chan pingResponse, 1)
 	go func() {
-		resp, err := http.Get(url)
+		resp, err := http.Head(url)
 		rc <- pingResponse{resp, err}
 	}()
 	select {
@@ -119,42 +114,34 @@ func timedGetRequest(url string, duration time.Duration) (resp *http.Response, e
 		resp = pr.Resp
 		err = pr.Err
 	case <-time.After(duration):
-		err = errors.New("GET request timed out")
+		err = errors.New("HEAD request timed out")
 	}
 	return
 }
 
-func (n *Node) RetrieveInfo(key Key) (*InfoResponse, error) {
+func (n *Node) RetrieveInfo(key Key) (bool, error) {
 	url := n.retrieveInfoUrl(key)
-	resp, err := timedGetRequest(url, 1*time.Second)
+	resp, err := timedHeadRequest(url, 1*time.Second)
 	if err != nil {
-		n.LastFailed = time.Now()
-		return nil, err
+		// TODO: n.LastFailed = time.Now()
+		return false, err
 	}
 
 	// otherwise, we got the info
-	n.LastSeen = time.Now()
+	// TODO: n.LastSeen = time.Now()
 	return n.processRetrieveInfoResponse(resp)
 }
 
-func (n *Node) processRetrieveInfoResponse(resp *http.Response) (*InfoResponse, error) {
+func (n *Node) processRetrieveInfoResponse(resp *http.Response) (bool, error) {
 	if resp == nil {
-		return nil, errors.New("nil response")
+		return false, errors.New("nil response")
 	}
 	defer resp.Body.Close()
 	if resp.Status != "200 OK" {
-		return nil, errors.New("404, probably")
+		return false, errors.New("404, probably")
 	}
-	var response InfoResponse
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	err = json.Unmarshal(b, &response)
-	if err != nil {
-		return nil, err
-	}
-	return &response, nil
+	ioutil.ReadAll(resp.Body)
+	return true, nil
 }
 
 type node_heartbeat struct {

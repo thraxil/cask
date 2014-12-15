@@ -22,7 +22,7 @@ func NewDiskBackend(root string) *DiskBackend {
 }
 
 func (d *DiskBackend) Write(key Key, r io.Reader) {
-	path := d.Root + key.AsPath()
+	path := d.Root + key.Algorithm + "/" + key.AsPath()
 	log.Println(fmt.Sprintf("writing to %s\n", path))
 	os.MkdirAll(path, 0755)
 	fullpath := path + "/data"
@@ -32,12 +32,12 @@ func (d *DiskBackend) Write(key Key, r io.Reader) {
 }
 
 func (d DiskBackend) Read(key Key) ([]byte, error) {
-	path := d.Root + key.AsPath() + "/data"
+	path := d.Root + key.Algorithm + "/" + key.AsPath() + "/data"
 	return ioutil.ReadFile(path)
 }
 
 func (d DiskBackend) Exists(key Key) bool {
-	path := d.Root + key.AsPath() + "/data"
+	path := d.Root + key.Algorithm + "/" + key.AsPath() + "/data"
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return false
 	}
@@ -45,7 +45,7 @@ func (d DiskBackend) Exists(key Key) bool {
 }
 
 func (d DiskBackend) Delete(key Key) error {
-	path := d.Root + key.AsPath()
+	path := d.Root + key.Algorithm + "/" + key.AsPath()
 	return os.RemoveAll(path)
 }
 

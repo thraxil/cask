@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"path/filepath"
 	"strings"
 )
@@ -17,14 +16,15 @@ func KeyFromPath(path string) (*Key, error) {
 	dir := filepath.Dir(path)
 	parts := strings.Split(dir, "/")
 	// only want the last 20 parts
-	if len(parts) < 20 {
+	if len(parts) < 21 {
 		return nil, errors.New("not enough parts")
 	}
+	algorithm := parts[len(parts)-21]
 	hash := strings.Join(parts[len(parts)-20:], "")
 	if len(hash) != 40 {
 		return nil, errors.New(fmt.Sprintf("invalid hash length: %d (%s)", len(hash), hash))
 	}
-	return KeyFromString("sha1:" + hash)
+	return KeyFromString(algorithm + ":" + hash)
 }
 
 func KeyFromString(str string) (*Key, error) {
@@ -35,7 +35,6 @@ func KeyFromString(str string) (*Key, error) {
 	}
 	str = parts[1]
 	if len(str) != 40 {
-		log.Println(str)
 		return nil, errors.New("invalid key")
 	}
 	return &Key{algorithm, []byte(str)}, nil

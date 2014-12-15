@@ -62,8 +62,8 @@ func (r Rebalancer) checkNodesForRebalance(nodes_to_check []Node) (bool, bool, i
 }
 
 func (r Rebalancer) retrieveReplica(n Node, satisfied bool) int {
-	file_info, err := n.RetrieveInfo(r.key)
-	if err == nil && file_info != nil && file_info.Local {
+	local, err := n.RetrieveInfo(r.key)
+	if err == nil && local {
 		return 1
 	} else {
 		if !satisfied {

@@ -16,9 +16,8 @@ HTTP.
 
     POST /local/ --> post a file to this node. returns Key
     GET /local/<Key>/ -> retrieve a file from this node by Key
+    HEAD /local/<Key>/ -> find out if the node has this Key locally
     POST /join/ -> add a node to the cluster
-    GET /info/ -> get JSON data about this node and its view of the
-                  cluster
     POST /heartbeat/ -> tell the node that I (another node) am alive
                         and well.
 

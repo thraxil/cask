@@ -48,7 +48,6 @@ func main() {
 
 	http.HandleFunc("/", makeHandler(indexHandler, s))
 	http.HandleFunc("/local/", makeHandler(localHandler, s))
-	http.HandleFunc("/info/", makeHandler(infoHandler, s))
 	http.HandleFunc("/file/", makeHandler(fileHandler, s))
 	http.HandleFunc("/join/", makeHandler(joinHandler, s))
 	http.HandleFunc("/config/", makeHandler(configHandler, s))
