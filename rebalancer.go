@@ -28,9 +28,9 @@ func (r Rebalancer) Rebalance() error {
 	nodes_to_check := r.c.ReadOrder(r.key.String())
 	satisfied, delete_local, found_replicas := r.checkNodesForRebalance(nodes_to_check)
 	if !satisfied {
-		log.Printf("could not replicate %s to %d nodes", r.path, r.s.Replication)
+		log.Printf("could not replicate %s to %d nodes", r.key, r.s.Replication)
 	} else {
-		log.Printf("%s has full replica set (%d of %d)\n", r.path, found_replicas, r.s.Replication)
+		log.Printf("%s has full replica set (%d of %d)\n", r.key, found_replicas, r.s.Replication)
 	}
 	if satisfied && delete_local {
 		r.clean_up_excess_replica()
@@ -78,6 +78,7 @@ func (r Rebalancer) retrieveReplica(n Node, satisfied bool) int {
 				log.Printf("replicated %s\n", r.key)
 				return 1
 			} else {
+				log.Println("write to the node failed, but what can we do?")
 			}
 		}
 	}

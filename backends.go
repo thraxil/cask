@@ -159,7 +159,7 @@ func visit(path string, f os.FileInfo, err error, c *Cluster, s Site) error {
 		return err
 	}
 
-	log.Printf("active anti-entropy visiting %s\n", path)
+	log.Printf("AAE visiting %s\n", path)
 
 	key, err := KeyFromPath(path)
 	if err != nil {
@@ -211,7 +211,7 @@ func (d DiskBackend) ActiveAntiEntropy(cluster *Cluster, site Site) {
 	for {
 		jitter = rand.Intn(5)
 		time.Sleep(time.Duration(base_time+jitter) * time.Second)
-		log.Println("active anti-entropy starting at the top")
+		log.Println("AAE starting at the top")
 		err := filepath.Walk(d.Root, makeVisitor(visit, cluster, site))
 		if err != nil {
 			log.Printf("filepath.Walk() returned %v\n", err)

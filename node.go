@@ -95,7 +95,7 @@ func (n *Node) Retrieve(key Key) ([]byte, error) {
 }
 
 func (n Node) retrieveInfoUrl(key Key) string {
-	return n.BaseUrl + "/info/%s" + key.String() + "/"
+	return n.BaseUrl + "/info/" + key.String() + "/"
 }
 
 type InfoResponse struct {
