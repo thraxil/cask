@@ -14,7 +14,7 @@ func NewSite(n *Node, c *Cluster, b Backend) *Site {
 		Cluster:        c,
 		Backend:        b,
 		Replication:    3,
-		MaxReplication: 4,
+		MaxReplication: 3,
 	}
 }
 
