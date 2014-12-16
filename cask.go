@@ -44,6 +44,7 @@ func main() {
 	}
 	go cluster.Heartbeat()
 	go s.ActiveAntiEntropy()
+	go cluster.Reaper()
 
 	log.Println("=== Cask Node starting ================")
 	log.Println("Root: " + c.DiskBackendRoot)

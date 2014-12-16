@@ -393,6 +393,37 @@ func (c *Cluster) Heartbeat() {
 	}
 }
 
+func (c *Cluster) Reaper() {
+	// sleep for a couple heartbeat cycles when we first start up
+	// to make sure everything has had time to settle
+	base_time := c.HeartbeatInterval
+	jitter := rand.Intn(5)
+	time.Sleep(time.Duration((base_time*3)+jitter) * time.Second)
+	// now on with the reaping
+
+	var to_reap []Node
+	// if we haven't heard from a node in over three heartbeats...
+	reap_period := time.Duration(base_time*3) * time.Second
+
+	for {
+		log.Println("Reaper wakes up...")
+		neighbors := c.GetNeighbors()
+		to_reap = make([]Node, 0)
+		for _, n := range neighbors {
+			if time.Since(n.LastSeen) > reap_period {
+				// it's dead, Jim!
+				to_reap = append(to_reap, n)
+			}
+		}
+		for _, n := range to_reap {
+			log.Printf("reaping %s\n", n.UUID)
+			c.RemoveNeighbor(n)
+		}
+		jitter := rand.Intn(5)
+		time.Sleep(time.Duration(base_time+jitter) * time.Second)
+	}
+}
+
 func (c Cluster) CheckSecret(s string) bool {
 	return c.secret == s
 }

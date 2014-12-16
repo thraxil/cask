@@ -190,7 +190,10 @@ func (n Node) SendHeartbeat(hb heartbeat) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		// can't send a heartbeat to that node
+		// TODO: mark it as failed
+		// for now, just keep going...
+		return
 	}
 	defer resp.Body.Close()
 	ioutil.ReadAll(resp.Body)
