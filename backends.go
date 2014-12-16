@@ -7,5 +7,5 @@ type Backend interface {
 	Read(key Key) ([]byte, error)
 	Exists(key Key) bool
 	Delete(key Key) error
-	ActiveAntiEntropy(cluster *Cluster, site Site)
+	ActiveAntiEntropy(cluster *Cluster, site Site, interval int)
 }

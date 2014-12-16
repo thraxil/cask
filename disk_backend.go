@@ -195,12 +195,11 @@ func makeVisitor(fn func(string, os.FileInfo, error, *Cluster, Site) error,
 	}
 }
 
-func (d DiskBackend) ActiveAntiEntropy(cluster *Cluster, site Site) {
-	var base_time = 10
+func (d DiskBackend) ActiveAntiEntropy(cluster *Cluster, site Site, interval int) {
 	var jitter = 1
 	for {
 		jitter = rand.Intn(5)
-		time.Sleep(time.Duration(base_time+jitter) * time.Second)
+		time.Sleep(time.Duration(interval+jitter) * time.Second)
 		log.Println("AAE starting at the top")
 		err := filepath.Walk(d.Root, makeVisitor(visit, cluster, site))
 		if err != nil {

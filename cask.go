@@ -25,6 +25,7 @@ type Config struct {
 	MaxReplication    int    `envconfig:"MAX_REPLICATION"`
 	ClusterSecret     string `envconfig:"CLUSTER_SECRET"`
 	HeartbeatInterval int    `envconfig:"HEARTBEAT_INTERVAL"`
+	AAEInterval       int    `envconfig:"AAE_INTERVAL"`
 }
 
 func main() {
@@ -37,7 +38,7 @@ func main() {
 	n := NewNode(c.UUID, c.BaseUrl, c.Writeable)
 	backend := NewDiskBackend(c.DiskBackendRoot)
 	cluster := NewCluster(*n, c.ClusterSecret, c.HeartbeatInterval)
-	s := NewSite(n, cluster, backend, c.Replication, c.MaxReplication, c.ClusterSecret)
+	s := NewSite(n, cluster, backend, c.Replication, c.MaxReplication, c.ClusterSecret, c.AAEInterval)
 	if c.Neighbors != "" {
 		go cluster.BootstrapNeighbors(c.Neighbors)
 	}
