@@ -62,7 +62,7 @@ func (r Rebalancer) checkNodesForRebalance(nodes_to_check []Node) (bool, bool, i
 }
 
 func (r Rebalancer) retrieveReplica(n Node, satisfied bool) int {
-	local, err := n.RetrieveInfo(r.key)
+	local, err := n.RetrieveInfo(r.key, r.c.secret)
 	if err == nil && local {
 		return 1
 	} else {
@@ -74,7 +74,7 @@ func (r Rebalancer) retrieveReplica(n Node, satisfied bool) int {
 				log.Printf("error reading from backend")
 				return 0
 			}
-			if n.AddFile(r.key, buf) {
+			if n.AddFile(r.key, buf, r.c.secret) {
 				log.Printf("replicated %s\n", r.key)
 				return 1
 			} else {

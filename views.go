@@ -15,6 +15,12 @@ import (
 // read/write file requests that shall only touch
 // the current node. No cluster interaction.
 func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+	secret := r.Header.Get("X-Cask-Cluster-Secret")
+	if !s.Cluster.CheckSecret(secret) {
+		log.Println("unauthorized local file request")
+		http.Error(w, "sorry, need the secret knock", 403)
+		return
+	}
 	parts := strings.Split(r.URL.String(), "/")
 	if len(parts) == 3 {
 		if r.Method == "POST" {
@@ -106,6 +112,7 @@ func fileHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 		data, err := s.Cluster.Retrieve(*k)
 		if err != nil {
 			http.Error(w, "not found", 404)
+			return
 		}
 		w.Write(data)
 	} else {
@@ -173,6 +180,7 @@ func postFileHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	b, err := json.Marshal(pr)
 	if err != nil {
 		http.Error(w, "json error", 500)
+		return
 	}
 	w.Write(b)
 }
@@ -184,6 +192,13 @@ func joinHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 			return
 		}
 		u := r.FormValue("url")
+		secret := r.FormValue("secret")
+		if !s.Cluster.CheckSecret(secret) {
+			log.Println("got an unauthorized join attempt")
+			log.Println(secret)
+			http.Error(w, "need to know the secret knock", 403)
+			return
+		}
 		n, err := s.Cluster.JoinNeighbor(u)
 		if err != nil {
 			fmt.Fprint(w, err)
@@ -203,6 +218,12 @@ func heartbeatHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 		err := decoder.Decode(&hb)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
+			return
+		}
+		if !s.Cluster.CheckSecret(hb.Secret) {
+			log.Println("got an unauthorized heartbeat")
+			http.Error(w, "sorry, need the secret knock", 403)
+			return
 		}
 		n := Node{
 			UUID: hb.UUID, BaseUrl: hb.BaseUrl, Writeable: hb.Writeable,
@@ -284,6 +305,7 @@ const join_template = `
 <h1>Add Node</h1>
 <form action="." method="post">
 <input type="text" name="url" placeholder="Base URL" size="128" /><br />
+<input type="text" name="secret" placeholder="cluster secret" /><br />
 <input type="submit" value="add node" />
 </form>
 </body>

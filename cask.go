@@ -15,14 +15,16 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, *Site), s *Site) ht
 }
 
 type Config struct {
-	Writeable       bool
-	BaseUrl         string `envconfig:"BASE_URL"`
-	UUID            string
-	DiskBackendRoot string `envconfig:"DISK_BACKEND_ROOT"`
-	Port            int
-	Neighbors       string
-	Replication     int
-	MaxReplication  int `envconfig:"MAX_REPLICATION"`
+	Writeable         bool
+	BaseUrl           string `envconfig:"BASE_URL"`
+	UUID              string
+	DiskBackendRoot   string `envconfig:"DISK_BACKEND_ROOT"`
+	Port              int
+	Neighbors         string
+	Replication       int
+	MaxReplication    int    `envconfig:"MAX_REPLICATION"`
+	ClusterSecret     string `envconfig:"CLUSTER_SECRET"`
+	HeartbeatInterval int    `envconfig:"HEARTBEAT_INTERVAL"`
 }
 
 func main() {
@@ -34,8 +36,8 @@ func main() {
 
 	n := NewNode(c.UUID, c.BaseUrl, c.Writeable)
 	backend := NewDiskBackend(c.DiskBackendRoot)
-	cluster := NewCluster(*n)
-	s := NewSite(n, cluster, backend, c.Replication, c.MaxReplication)
+	cluster := NewCluster(*n, c.ClusterSecret, c.HeartbeatInterval)
+	s := NewSite(n, cluster, backend, c.Replication, c.MaxReplication, c.ClusterSecret)
 	if c.Neighbors != "" {
 		go cluster.BootstrapNeighbors(c.Neighbors)
 	}

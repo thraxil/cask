@@ -17,17 +17,25 @@ import (
 const REPLICAS = 16
 
 type Cluster struct {
-	Myself    Node
-	neighbors map[string]Node
-	chF       chan func()
+	Myself            Node
+	secret            string
+	neighbors         map[string]Node
+	chF               chan func()
+	HeartbeatInterval int
 }
 
-func NewCluster(myself Node) *Cluster {
+func NewCluster(myself Node, secret string, heartbeat_interval int) *Cluster {
 	rand.Seed(time.Now().UnixNano())
+	if heartbeat_interval < 1 {
+		// unset. default to 1 minute
+		heartbeat_interval = 60
+	}
 	c := &Cluster{
-		Myself:    myself,
-		neighbors: make(map[string]Node),
-		chF:       make(chan func()),
+		Myself:            myself,
+		secret:            secret,
+		neighbors:         make(map[string]Node),
+		chF:               make(chan func()),
+		HeartbeatInterval: heartbeat_interval,
 	}
 	go c.backend()
 	return c
@@ -258,7 +266,7 @@ func (c *Cluster) Retrieve(key Key) ([]byte, error) {
 			continue
 		}
 		log.Printf("ask node %s for it\n", n.UUID)
-		f, err := n.Retrieve(key)
+		f, err := n.Retrieve(key, c.secret)
 		if err == nil {
 			// got it, return it
 			log.Println("   they had it")
@@ -274,7 +282,7 @@ func (c *Cluster) AddFile(key Key, f multipart.File, replication int, min_replic
 	nodes := c.WriteOrder(key.String())
 	var save_count = 0
 	for _, n := range nodes {
-		if n.AddFile(key, f) {
+		if n.AddFile(key, f, c.secret) {
 			save_count++
 			n.LastSeen = time.Now()
 			c.UpdateNeighbor(n)
@@ -323,7 +331,7 @@ func (c *Cluster) JoinNeighbor(u string) (*Node, error) {
 			continue
 		}
 		res, err = http.PostForm(neighbor.BaseUrl+"/join/",
-			url.Values{"url": {u}})
+			url.Values{"url": {u}, "secret": {c.secret}})
 		if err != nil {
 			log.Println(err)
 		} else {
@@ -332,7 +340,7 @@ func (c *Cluster) JoinNeighbor(u string) (*Node, error) {
 	}
 	// reciprocate
 	res, err = http.PostForm(n.BaseUrl+"/join/",
-		url.Values{"url": {c.Myself.BaseUrl}})
+		url.Values{"url": {c.Myself.BaseUrl}, "secret": {c.secret}})
 	if err != nil {
 		return nil, err
 	}
@@ -356,12 +364,13 @@ type heartbeat struct {
 	UUID      string `json:"uuid"`
 	BaseUrl   string `json:"base_url"`
 	Writeable bool   `json:"writeable"`
+	Secret    string `json:"secret"`
 
 	Neighbors []node_heartbeat `json:"neighbors"`
 }
 
 func (c *Cluster) Heartbeat() {
-	base_time := 60
+	base_time := c.HeartbeatInterval
 	for {
 		jitter := rand.Intn(5)
 		time.Sleep(time.Duration(base_time+jitter) * time.Second)
@@ -376,9 +385,14 @@ func (c *Cluster) Heartbeat() {
 			BaseUrl:   c.Myself.BaseUrl,
 			Writeable: c.Myself.Writeable,
 			Neighbors: neighbor_hbs,
+			Secret:    c.secret,
 		}
 		for _, n := range neighbors {
 			n.SendHeartbeat(hb)
 		}
 	}
+}
+
+func (c Cluster) CheckSecret(s string) bool {
+	return c.secret == s
 }

@@ -34,8 +34,8 @@ func (n Node) AddFileUrl() string {
 	return n.BaseUrl + "/local/"
 }
 
-func (n *Node) AddFile(key Key, f io.Reader) bool {
-	resp, err := postFile(f, n.AddFileUrl())
+func (n *Node) AddFile(key Key, f io.Reader, secret string) bool {
+	resp, err := postFile(f, n.AddFileUrl(), secret)
 	if err != nil {
 		log.Println("postFile returned false")
 		return false
@@ -51,7 +51,7 @@ func (n *Node) AddFile(key Key, f io.Reader) bool {
 	return string(b) == key.String()
 }
 
-func postFile(f io.Reader, target_url string) (*http.Response, error) {
+func postFile(f io.Reader, target_url, secret string) (*http.Response, error) {
 	body_buf := bytes.NewBufferString("")
 	body_writer := multipart.NewWriter(body_buf)
 	file_writer, err := body_writer.CreateFormFile("file", "file.dat")
@@ -63,7 +63,15 @@ func postFile(f io.Reader, target_url string) (*http.Response, error) {
 	// do not defer this or it will make and empty POST request
 	body_writer.Close()
 	content_type := body_writer.FormDataContentType()
-	return http.Post(target_url, content_type, body_buf)
+	c := http.Client{}
+	req, err := http.NewRequest("POST", target_url, body_buf)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", content_type)
+	req.Header.Set("X-Cask-Cluster-Secret", secret)
+
+	return c.Do(req)
 }
 
 func (n Node) HashKeys() []string {
@@ -81,8 +89,14 @@ func (n Node) retrieveUrl(key Key) string {
 	return n.BaseUrl + "/local/" + key.String() + "/"
 }
 
-func (n *Node) Retrieve(key Key) ([]byte, error) {
-	resp, err := http.Get(n.retrieveUrl(key))
+func (n *Node) Retrieve(key Key, secret string) ([]byte, error) {
+	c := http.Client{}
+	req, err := http.NewRequest("GET", n.retrieveUrl(key), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("X-Cask-Cluster-Secret", secret)
+	resp, err := c.Do(req)
 	defer resp.Body.Close()
 	if err != nil {
 		return nil, err
@@ -103,10 +117,17 @@ type pingResponse struct {
 	Err  error
 }
 
-func timedHeadRequest(url string, duration time.Duration) (resp *http.Response, err error) {
+func timedHeadRequest(url string, duration time.Duration, secret string) (resp *http.Response, err error) {
 	rc := make(chan pingResponse, 1)
 	go func() {
-		resp, err := http.Head(url)
+		c := http.Client{}
+		req, err := http.NewRequest("HEAD", url, nil)
+		if err != nil {
+			rc <- pingResponse{nil, err}
+			return
+		}
+		req.Header.Set("X-Cask-Cluster-Secret", secret)
+		resp, err := c.Do(req)
 		rc <- pingResponse{resp, err}
 	}()
 	select {
@@ -119,9 +140,9 @@ func timedHeadRequest(url string, duration time.Duration) (resp *http.Response, 
 	return
 }
 
-func (n *Node) RetrieveInfo(key Key) (bool, error) {
+func (n *Node) RetrieveInfo(key Key, secret string) (bool, error) {
 	url := n.retrieveInfoUrl(key)
-	resp, err := timedHeadRequest(url, 1*time.Second)
+	resp, err := timedHeadRequest(url, 1*time.Second, secret)
 	if err != nil {
 		// TODO: n.LastFailed = time.Now()
 		return false, err
@@ -177,8 +198,8 @@ func (n Node) SendHeartbeat(hb heartbeat) {
 
 // get file with specified key from the node
 // return (found, file content, error)
-func (n Node) CheckFile(key Key) (bool, []byte, error) {
-	f, err := n.Retrieve(key)
+func (n Node) CheckFile(key Key, secret string) (bool, []byte, error) {
+	f, err := n.Retrieve(key, secret)
 	if err != nil {
 		// node doesn't have it
 		return false, nil, nil

@@ -6,9 +6,10 @@ type Site struct {
 	Backend        Backend
 	Replication    int
 	MaxReplication int
+	ClusterSecret  string
 }
 
-func NewSite(n *Node, c *Cluster, b Backend, replication, max_replication int) *Site {
+func NewSite(n *Node, c *Cluster, b Backend, replication, max_replication int, cluster_secret string) *Site {
 	// couple sanity checks
 	if replication < 1 {
 		replication = 1
@@ -22,6 +23,7 @@ func NewSite(n *Node, c *Cluster, b Backend, replication, max_replication int) *
 		Backend:        b,
 		Replication:    replication,
 		MaxReplication: max_replication,
+		ClusterSecret:  cluster_secret,
 	}
 }
 

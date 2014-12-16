@@ -106,7 +106,7 @@ func repair_file(path string, key Key, c *Cluster) (bool, error) {
 
 			continue
 		}
-		found, f, err := n.CheckFile(key)
+		found, f, err := n.CheckFile(key, c.secret)
 		if found && err == nil {
 			err := replaceFile(path, f)
 			if err != nil {
