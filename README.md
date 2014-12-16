@@ -43,3 +43,103 @@ What Cask doesn't do:
 
 These limitations are because Cask is meant to be a component in a
 larger system.
+
+
+Configuration
+=============
+
+12-factor style, each cask node is configured through environment
+variables, all starting with `CASK_`. See the `env*` files in the test
+directory for examples of a simple cluster's settings. The ones that it expects:
+
+CASK_PORT
+---------
+
+Port to listen on.
+
+CASK_BASE_URL
+-------------
+
+Public base url. Leave off the trailing slash. eg,
+`http://localhost:8080`
+
+CASK_UUID
+---------
+
+Unique ID for the node. Every node in the cluster MUST have a unique
+ID. This doesn't strictly have to be a UUID, but it's recommended. An
+easy way to generate a unique id for each node is with
+
+    python -c "import uuid; print uuid.uuid4()"
+
+Try not to change these during the life of the cluster. The UUID is
+also the key used to determine which segments of the ring that node
+claims. So if you change the UUID after files have been written to it,
+many of them will likely have to move.
+
+CASK_WRITEABLE
+--------------
+
+Is this node writeable? If not, it will be considered read-only. This
+is useful if a node has filled up a disk. You can set it to read-only
+and still serve files from it, but it won't accept any new ones.
+
+CASK_BACKEND
+------------
+
+What is the storage backend for the node. Currently only 'disk' is implemented.
+
+CASK_DISK_BACKEND_ROOT
+----------------------
+
+Root directory for the disk storage backend. Full path is
+recommended. Obviously the user that the node is running as must have
+read and write permissions to it.
+
+CASK_NEIGHBORS
+--------------
+
+A comma seperated list of base URLs for other nodes. If this exists,
+the cask node will try, upon startup, to join those other nodes. This
+is handy for bootstrapping the cluster.
+
+CASK_REPLICATION
+----------------
+
+How many nodes to attempt to replicate to. You will want to have at
+least this many (writeable) nodes in your cluster. If it can't write a
+file to this many nodes, it will fail on upload and complain.
+
+CASK_MAX_REPLICATION
+--------------------
+
+As nodes come and go, sometimes you get extra copies of files on nodes
+that aren't at the front of the list for a given key. The active
+anti-entropy system will clear them out from the excess nodes if there
+are more than this many copies. Must be higher than
+`CASK_REPLICATON`, but you probably don't want it *much* higher.
+
+CASK_CLUSTER_SECRET
+-------------------
+
+Shared secret key for the cluster. Every node must be configured with
+exactly the same value for this field.
+
+CASK_HEARTBEAT_INTERVAL
+-----------------------
+
+How many seconds to sleep in between heartbeats. On each heartbeat, a
+node wakes up and sends a heartbeat signal to all the neighbors that
+it knows about to let them know it's still alive. Set this low enough
+that a dead node will be detected fairly quickly, but not so low that
+you waste a ton of bandwidth with heartbeats.
+
+CASK_AAE_INTERVAL
+-----------------
+
+How many seconds to sleep in between active anti-entropy file
+checks. This interval times the number of files stored on each node
+will be roughly how long it takes to verify and rebalance your entire
+repository. So think about how important that refresh period is and
+balance it against how much CPU and bandwidth the AAE system will
+consume.
