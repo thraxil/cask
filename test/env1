@@ -5,3 +5,5 @@ export CASK_WRITEABLE=true
 export CASK_BACKEND=disk
 export CASK_DISK_BACKEND_ROOT=/tmp/cask1/
 export CASK_NEIGHBORS=http://localhost:8080,http://localhost:8082
+export CASK_REPLICATION=3
+export CASK_MAX_REPLICATION=3

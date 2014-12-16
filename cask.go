@@ -21,6 +21,8 @@ type Config struct {
 	DiskBackendRoot string `envconfig:"DISK_BACKEND_ROOT"`
 	Port            int
 	Neighbors       string
+	Replication     int
+	MaxReplication  int `envconfig:"MAX_REPLICATION"`
 }
 
 func main() {
@@ -33,7 +35,7 @@ func main() {
 	n := NewNode(c.UUID, c.BaseUrl, c.Writeable)
 	backend := NewDiskBackend(c.DiskBackendRoot)
 	cluster := NewCluster(*n)
-	s := NewSite(n, cluster, backend)
+	s := NewSite(n, cluster, backend, c.Replication, c.MaxReplication)
 	if c.Neighbors != "" {
 		go cluster.BootstrapNeighbors(c.Neighbors)
 	}

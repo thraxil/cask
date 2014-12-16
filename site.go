@@ -8,13 +8,20 @@ type Site struct {
 	MaxReplication int
 }
 
-func NewSite(n *Node, c *Cluster, b Backend) *Site {
+func NewSite(n *Node, c *Cluster, b Backend, replication, max_replication int) *Site {
+	// couple sanity checks
+	if replication < 1 {
+		replication = 1
+	}
+	if max_replication < replication {
+		max_replication = replication
+	}
 	return &Site{
 		Node:           n,
 		Cluster:        c,
 		Backend:        b,
-		Replication:    3,
-		MaxReplication: 3,
+		Replication:    replication,
+		MaxReplication: max_replication,
 	}
 }
 
