@@ -138,6 +138,11 @@ func replaceFile(path string, file []byte) error {
 }
 
 func visit(path string, f os.FileInfo, err error, c *Cluster, s Site) error {
+	if AAE_SKIP < AAE_OFFSET {
+		AAE_SKIP++
+		return nil
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("Error in active anti-entropy.visit() [%s] %s\n", c.Myself.UUID, path)
@@ -195,12 +200,18 @@ func makeVisitor(fn func(string, os.FileInfo, error, *Cluster, Site) error,
 	}
 }
 
+var AAE_OFFSET = 0
+var AAE_SKIP = 0
+
 func (d DiskBackend) ActiveAntiEntropy(cluster *Cluster, site Site, interval int) {
+	AAE_OFFSET = rand.Intn(10000)
 	var jitter = 1
 	for {
-		jitter = rand.Intn(5)
-		time.Sleep(time.Duration(interval+jitter) * time.Second)
-		log.Println("AAE starting at the top")
+		if AAE_SKIP >= AAE_OFFSET {
+			jitter = rand.Intn(5)
+			time.Sleep(time.Duration(interval+jitter) * time.Second)
+			log.Println("AAE starting at the top")
+		}
 		err := filepath.Walk(d.Root, makeVisitor(visit, cluster, site))
 		if err != nil {
 			log.Printf("filepath.Walk() returned %v\n", err)
