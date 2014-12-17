@@ -82,12 +82,42 @@ func visitPreChecks(path string, f FileIsh, err error, c *Cluster) (bool, error)
 	return false, nil
 }
 
-func verify(path string, key Key, h string, c *Cluster) error {
+type Verifier struct {
+	c   *Cluster
+	chF chan func()
+}
+
+func NewVerifier(c *Cluster) *Verifier {
+	v := &Verifier{
+		c:   c,
+		chF: make(chan func()),
+	}
+	go v.run()
+	return v
+}
+
+func (v *Verifier) run() {
+	for f := range v.chF {
+		f()
+	}
+}
+
+func (v *Verifier) Verify(path string, key Key, h string) error {
+	r := make(chan error)
+	go func() {
+		v.chF <- func() {
+			r <- v.doVerify(path, key, h)
+		}
+	}()
+	return <-r
+}
+
+func (v *Verifier) doVerify(path string, key Key, h string) error {
 	if key.String() == "sha1:"+h {
 		return nil
 	}
 	log.Printf("corrupted file %s\n", path)
-	repaired, err := repair_file(path, key, c)
+	repaired, err := v.repair_file(path, key)
 	if err != nil {
 		log.Printf("error trying to repair file")
 		return err
@@ -99,16 +129,15 @@ func verify(path string, key Key, h string, c *Cluster) error {
 	return errors.New("unrepairable file")
 }
 
-func repair_file(path string, key Key, c *Cluster) (bool, error) {
-	nodes_to_check := c.ReadOrder(key.String())
+func (v *Verifier) repair_file(path string, key Key) (bool, error) {
+	nodes_to_check := v.c.ReadOrder(key.String())
 	for _, n := range nodes_to_check {
-		if n.UUID == c.Myself.UUID {
-
+		if n.UUID == v.c.Myself.UUID {
 			continue
 		}
-		found, f, err := n.CheckFile(key, c.secret)
+		found, f, err := n.CheckFile(key, v.c.secret)
 		if found && err == nil {
-			err := replaceFile(path, f)
+			err := v.replaceFile(path, f)
 			if err != nil {
 				log.Println("error replacing the file")
 				continue
@@ -121,7 +150,7 @@ func repair_file(path string, key Key, c *Cluster) (bool, error) {
 	return false, errors.New("no good copies found")
 }
 
-func replaceFile(path string, file []byte) error {
+func (v *Verifier) replaceFile(path string, file []byte) error {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
 		log.Println("couldn't open for writing")
@@ -175,7 +204,7 @@ func visit(path string, f os.FileInfo, err error, c *Cluster, s Site) error {
 		return err
 	}
 	hash := fmt.Sprintf("%x", h.Sum(nil))
-	err = verify(path, *key, hash, c)
+	err = s.Verify(path, *key, hash)
 	if err != nil {
 		return err
 	}
