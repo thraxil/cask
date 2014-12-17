@@ -180,8 +180,7 @@ func visit(path string, f os.FileInfo, err error, c *Cluster, s Site) error {
 		return err
 	}
 
-	r := NewRebalancer(path, *key, c, s)
-	err = r.Rebalance()
+	err = s.Rebalance(*key)
 	if err != nil {
 		return err
 	}

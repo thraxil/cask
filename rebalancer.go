@@ -6,39 +6,59 @@ import (
 	"log"
 )
 
-type Rebalancer struct {
-	c    *Cluster
-	s    Site
-	key  Key
-	path string
+type rebalanceRequest struct {
+	Key        Key
+	chResponse chan error
 }
 
-func NewRebalancer(path string, key Key, c *Cluster, s Site) *Rebalancer {
-	return &Rebalancer{c, s, key, path}
+type Rebalancer struct {
+	c   *Cluster
+	s   Site
+	chR chan rebalanceRequest
+}
+
+func NewRebalancer(c *Cluster, s Site) *Rebalancer {
+	ch := make(chan rebalanceRequest)
+	r := Rebalancer{c, s, ch}
+	go r.run()
+	return &r
+}
+
+func (r *Rebalancer) run() {
+	for req := range r.chR {
+		req.chResponse <- r.doRebalance(req.Key)
+	}
+}
+
+func (r *Rebalancer) Rebalance(key Key) error {
+	resp := make(chan error)
+	req := rebalanceRequest{key, resp}
+	r.chR <- req
+	return <-resp
 }
 
 // check that the file is stored in at least Replication nodes
 // and, if at all possible, those should be the ones at the front
 // of the list
-func (r Rebalancer) Rebalance() error {
+func (r Rebalancer) doRebalance(key Key) error {
 	if r.c == nil {
 		log.Println("can't rebalance on a nil cluster")
 		return errors.New("nil cluster")
 	}
-	nodes_to_check := r.c.ReadOrder(r.key.String())
-	satisfied, delete_local, found_replicas := r.checkNodesForRebalance(nodes_to_check)
+	nodes_to_check := r.c.ReadOrder(key.String())
+	satisfied, delete_local, found_replicas := r.checkNodesForRebalance(key, nodes_to_check)
 	if !satisfied {
-		log.Printf("could not replicate %s to %d nodes", r.key, r.s.Replication)
+		log.Printf("could not replicate %s to %d nodes", key, r.s.Replication)
 	} else {
-		log.Printf("%s has full replica set (%d of %d)\n", r.key, found_replicas, r.s.Replication)
+		log.Printf("%s has full replica set (%d of %d)\n", key, found_replicas, r.s.Replication)
 	}
 	if satisfied && delete_local {
-		r.clean_up_excess_replica()
+		r.clean_up_excess_replica(key)
 	}
 	return nil
 }
 
-func (r Rebalancer) checkNodesForRebalance(nodes_to_check []Node) (bool, bool, int) {
+func (r Rebalancer) checkNodesForRebalance(key Key, nodes_to_check []Node) (bool, bool, int) {
 	var satisfied = false
 	var found_replicas = 0
 	var delete_local = true
@@ -48,7 +68,7 @@ func (r Rebalancer) checkNodesForRebalance(nodes_to_check []Node) (bool, bool, i
 			delete_local = false
 			found_replicas++
 		} else {
-			found_replicas = found_replicas + r.retrieveReplica(n, satisfied)
+			found_replicas = found_replicas + r.retrieveReplica(key, n, satisfied)
 		}
 		if found_replicas >= r.s.Replication {
 			satisfied = true
@@ -61,21 +81,21 @@ func (r Rebalancer) checkNodesForRebalance(nodes_to_check []Node) (bool, bool, i
 	return satisfied, delete_local, found_replicas
 }
 
-func (r Rebalancer) retrieveReplica(n Node, satisfied bool) int {
-	local, err := n.RetrieveInfo(r.key, r.c.secret)
+func (r Rebalancer) retrieveReplica(key Key, n Node, satisfied bool) int {
+	local, err := n.RetrieveInfo(key, r.c.secret)
 	if err == nil && local {
 		return 1
 	} else {
 		if !satisfied {
-			b, err := r.s.Backend.Read(r.key)
+			b, err := r.s.Backend.Read(key)
 			buf := bytes.NewBuffer(b)
 
 			if err != nil {
 				log.Printf("error reading from backend")
 				return 0
 			}
-			if n.AddFile(r.key, buf, r.c.secret) {
-				log.Printf("replicated %s\n", r.key)
+			if n.AddFile(key, buf, r.c.secret) {
+				log.Printf("replicated %s\n", key)
 				return 1
 			} else {
 				log.Println("write to the node failed, but what can we do?")
@@ -87,12 +107,12 @@ func (r Rebalancer) retrieveReplica(n Node, satisfied bool) int {
 
 // our node is not at the front of the list, so
 // we have an excess copy. clean that up and make room!
-func (r Rebalancer) clean_up_excess_replica() {
-	err := r.s.Backend.Delete(r.key)
+func (r Rebalancer) clean_up_excess_replica(key Key) {
+	err := r.s.Backend.Delete(key)
 	if err != nil {
-		log.Printf("could not clear out excess replica: %s\n", r.key)
+		log.Printf("could not clear out excess replica: %s\n", key)
 		log.Println(err.Error())
 	} else {
-		log.Printf("cleared excess replica: %s\n", r.key)
+		log.Printf("cleared excess replica: %s\n", key)
 	}
 }

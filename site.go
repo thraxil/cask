@@ -8,6 +8,7 @@ type Site struct {
 	MaxReplication int
 	ClusterSecret  string
 	AAEInterval    int
+	rebalancer     *Rebalancer
 }
 
 func NewSite(n *Node, c *Cluster, b Backend, replication, max_replication int, cluster_secret string, aae_interval int) *Site {
@@ -22,7 +23,7 @@ func NewSite(n *Node, c *Cluster, b Backend, replication, max_replication int, c
 		// unset. default to 5 seconds
 		aae_interval = 5
 	}
-	return &Site{
+	s := &Site{
 		Node:           n,
 		Cluster:        c,
 		Backend:        b,
@@ -31,9 +32,15 @@ func NewSite(n *Node, c *Cluster, b Backend, replication, max_replication int, c
 		ClusterSecret:  cluster_secret,
 		AAEInterval:    aae_interval,
 	}
+	s.rebalancer = NewRebalancer(c, *s)
+	return s
 }
 
 func (s Site) ActiveAntiEntropy() {
 	// it's the backend's responsibility
 	s.Backend.ActiveAntiEntropy(s.Cluster, s, s.AAEInterval)
+}
+
+func (s Site) Rebalance(key Key) error {
+	return s.rebalancer.Rebalance(key)
 }

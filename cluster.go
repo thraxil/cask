@@ -38,6 +38,7 @@ func NewCluster(myself Node, secret string, heartbeat_interval int) *Cluster {
 		HeartbeatInterval: heartbeat_interval,
 	}
 	go c.backend()
+
 	return c
 }
 
