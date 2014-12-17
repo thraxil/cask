@@ -143,3 +143,13 @@ will be roughly how long it takes to verify and rebalance your entire
 repository. So think about how important that refresh period is and
 balance it against how much CPU and bandwidth the AAE system will
 consume.
+
+CASK_SSL_CERTIFICATE and CASK_SSL_KEY
+-------------------------------------
+
+Paths to certificate and key files. If you set these, you must also
+set your BASE_URL to start with 'https://'. This will cause Cask to
+serve via TLS. Otherwise, you get plain HTTP.
+
+Be careful of self-signed certificates and such. Go's TLS client
+library is very picky about that sort of thing.

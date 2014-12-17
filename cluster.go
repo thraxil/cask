@@ -302,6 +302,7 @@ func (c *Cluster) JoinNeighbor(u string) (*Node, error) {
 	config_url := u + "/config/"
 	res, err := http.Get(config_url)
 	if err != nil {
+		log.Println(err)
 		return nil, errors.New("error retrieving config")
 	}
 	defer res.Body.Close()

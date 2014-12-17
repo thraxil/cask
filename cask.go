@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -26,6 +27,8 @@ type Config struct {
 	ClusterSecret     string `envconfig:"CLUSTER_SECRET"`
 	HeartbeatInterval int    `envconfig:"HEARTBEAT_INTERVAL"`
 	AAEInterval       int    `envconfig:"AAE_INTERVAL"`
+	SSL_Cert          string `envconfig:"SSL_CERT"`
+	SSL_Key           string `envconfig:"SSL_Key"`
 }
 
 func main() {
@@ -61,5 +64,9 @@ func main() {
 
 	http.HandleFunc("/favicon.ico", faviconHandler)
 
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", c.Port), nil))
+	if c.SSL_Cert != "" && c.SSL_Key != "" && strings.HasPrefix(c.BaseUrl, "https:") {
+		log.Fatal(http.ListenAndServeTLS(fmt.Sprintf(":%d", c.Port), c.SSL_Cert, c.SSL_Key, nil))
+	} else {
+		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", c.Port), nil))
+	}
 }
