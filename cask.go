@@ -34,7 +34,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-
+	log.SetPrefix(c.UUID[:8] + " ")
 	n := NewNode(c.UUID, c.BaseUrl, c.Writeable)
 	backend := NewDiskBackend(c.DiskBackendRoot)
 	cluster := NewCluster(*n, c.ClusterSecret, c.HeartbeatInterval)
