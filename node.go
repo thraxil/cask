@@ -51,6 +51,10 @@ func (n *Node) AddFile(key Key, f io.Reader, secret string) bool {
 	return string(b) == key.String()
 }
 
+func (n Node) Unhealthy() bool {
+	return n.LastFailed.After(n.LastSeen)
+}
+
 func postFile(f io.Reader, target_url, secret string) (*http.Response, error) {
 	body_buf := bytes.NewBufferString("")
 	body_writer := multipart.NewWriter(body_buf)

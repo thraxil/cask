@@ -120,13 +120,6 @@ func fileHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	}
 }
 
-type clusterInfoPage struct {
-	Title     string
-	Cluster   *Cluster
-	Myself    *Node
-	Neighbors []Node
-}
-
 func indexHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	if r.Method == "GET" {
 		clusterInfoHandler(w, r, s)
@@ -139,12 +132,21 @@ func indexHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	http.Error(w, "method not supported", 405)
 }
 
+type clusterInfoPage struct {
+	Title     string
+	Cluster   *Cluster
+	Myself    *Node
+	Neighbors []Node
+	Site      *Site
+}
+
 func clusterInfoHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	p := clusterInfoPage{
 		Title:     "cluster status",
 		Cluster:   s.Cluster,
 		Myself:    s.Node,
 		Neighbors: s.Cluster.NeighborsInclusive(),
+		Site:      s,
 	}
 	t, _ := template.New("cluster").Parse(cluster_template)
 	t.Execute(w, p)
@@ -263,39 +265,48 @@ const cluster_template = `
 <html>
 <head>
 <title>{{.Title}}</title>
+<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css" />
 </head>
 <body>
-<h2>Node: {{.Myself.UUID}}</h2>
-<table>
+<div class="container">
+<h1>Node: {{.Myself.UUID}}</h1>
+<table class="table">
 <tr><th>Base</th><td>{{.Myself.BaseUrl}}</td></tr>
 <tr><th>Writeable</th><td>{{.Myself.Writeable}}</td></tr>
+<tr><th>Replication</th><td>{{.Site.Replication}}</td></tr>
+<tr><th>Max Replication</th><td>{{.Site.MaxReplication}}</td></tr>
+<tr><th>Active Anti-Entropy Interval</th><td>{{.Site.AAEInterval}} seconds</td></tr>
 </table>
 <h2>cluster status</h2>
-<table border="1">
+<table class="table table-condensed table-striped">
 <tr>
 <th>UUID</th>
 <th>Base</th>
 <th>Writeable</th>
-<th>LastSeen</th>
-<th>LastFailed</th>
+<th>Last Seen</th>
+<th>Last Failed</th>
 </tr>
 {{range .Neighbors}}
-<tr>
+{{if .LastSeen.IsZero}}
+{{else}}
+<tr {{if .Unhealthy}}class="danger"{{end}}>
 <td>{{.UUID}}</td>
 <td><a href="{{.BaseUrl}}">{{.BaseUrl}}</a></td>
-<td>{{.Writeable}}</td>
+<td>{{if .Writeable}}<span class="text-success">yes</span>{{else}}<span class="text-danger">read-only</span>{{end}}</td>
 <td>{{.LastSeen}}</td>
-<td>{{.LastFailed}}</td>
+<td>{{if .LastFailed.IsZero}}-{{else}}{{.LastFailed}}{{end}}</td>
 </tr>
+{{end}}
 {{end}}
 </table>
 </body>
 
-<ul>
-<li><a href="/join/">Add a node manually</a></li>
-<li><a href="/config/">JSON config data</a></li>
+<ul class="nav nav-pills">
+<li role="presentation"><a href="/join/">Add a node manually</a></li>
+<li role="presentation"><a href="/config/">JSON config data</a></li>
 </ul>
 
+</div>
 </html>
 `
 
