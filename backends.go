@@ -8,4 +8,5 @@ type Backend interface {
 	Exists(key Key) bool
 	Delete(key Key) error
 	ActiveAntiEntropy(cluster *Cluster, site Site, interval int)
+	NewVerifier(cluster *Cluster) Verifier
 }

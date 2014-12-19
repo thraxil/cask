@@ -8,7 +8,7 @@ type Site struct {
 	MaxReplication int
 	ClusterSecret  string
 	AAEInterval    int
-	verifier       *Verifier
+	verifier       Verifier
 	rebalancer     *Rebalancer
 }
 
@@ -33,7 +33,7 @@ func NewSite(n *Node, c *Cluster, b Backend, replication, max_replication int, c
 		ClusterSecret:  cluster_secret,
 		AAEInterval:    aae_interval,
 	}
-	s.verifier = NewVerifier(c)
+	s.verifier = b.NewVerifier(c)
 	s.rebalancer = NewRebalancer(c, *s)
 	return s
 }

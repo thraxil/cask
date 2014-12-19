@@ -19,7 +19,11 @@ type Config struct {
 	Writeable         bool
 	BaseUrl           string `envconfig:"BASE_URL"`
 	UUID              string
+	Backend           string
 	DiskBackendRoot   string `envconfig:"DISK_BACKEND_ROOT"`
+	S3AccessKey       string `envconfig:"S3_ACCESS_KEY"`
+	S3SecretKey       string `envconfig:"S3_SECRET_KEY"`
+	S3Bucket          string `envconfig:"S3_BUCKET"`
 	Port              int
 	Neighbors         string
 	Replication       int
@@ -39,7 +43,17 @@ func main() {
 	}
 	log.SetPrefix(c.UUID[:8] + " ")
 	n := NewNode(c.UUID, c.BaseUrl, c.Writeable)
-	backend := NewDiskBackend(c.DiskBackendRoot)
+	var backend Backend
+	if c.Backend == "disk" {
+		backend = NewDiskBackend(c.DiskBackendRoot)
+	} else if c.Backend == "s3" {
+		if c.S3AccessKey == "" || c.S3SecretKey == "" || c.S3Bucket == "" {
+			log.Fatal("need S3 ACCESS_KEY, SECRET_KEY, and bucket all configured")
+		} else {
+			backend = NewS3Backend(c.S3AccessKey, c.S3SecretKey, c.S3Bucket)
+		}
+	}
+
 	cluster := NewCluster(*n, c.ClusterSecret, c.HeartbeatInterval)
 	s := NewSite(n, cluster, backend, c.Replication, c.MaxReplication, c.ClusterSecret, c.AAEInterval)
 	if c.Neighbors != "" {

@@ -82,13 +82,13 @@ func visitPreChecks(path string, f FileIsh, err error, c *Cluster) (bool, error)
 	return false, nil
 }
 
-type Verifier struct {
+type DiskVerifier struct {
 	c   *Cluster
 	chF chan func()
 }
 
-func NewVerifier(c *Cluster) *Verifier {
-	v := &Verifier{
+func (b DiskBackend) NewVerifier(c *Cluster) Verifier {
+	v := &DiskVerifier{
 		c:   c,
 		chF: make(chan func()),
 	}
@@ -96,13 +96,13 @@ func NewVerifier(c *Cluster) *Verifier {
 	return v
 }
 
-func (v *Verifier) run() {
+func (v *DiskVerifier) run() {
 	for f := range v.chF {
 		f()
 	}
 }
 
-func (v *Verifier) Verify(path string, key Key, h string) error {
+func (v *DiskVerifier) Verify(path string, key Key, h string) error {
 	r := make(chan error)
 	go func() {
 		v.chF <- func() {
@@ -112,7 +112,7 @@ func (v *Verifier) Verify(path string, key Key, h string) error {
 	return <-r
 }
 
-func (v *Verifier) doVerify(path string, key Key, h string) error {
+func (v *DiskVerifier) doVerify(path string, key Key, h string) error {
 	if key.String() == "sha1:"+h {
 		return nil
 	}
@@ -129,7 +129,7 @@ func (v *Verifier) doVerify(path string, key Key, h string) error {
 	return errors.New("unrepairable file")
 }
 
-func (v *Verifier) repair_file(path string, key Key) (bool, error) {
+func (v *DiskVerifier) repair_file(path string, key Key) (bool, error) {
 	nodes_to_check := v.c.ReadOrder(key.String())
 	for _, n := range nodes_to_check {
 		if n.UUID == v.c.Myself.UUID {
@@ -150,7 +150,7 @@ func (v *Verifier) repair_file(path string, key Key) (bool, error) {
 	return false, errors.New("no good copies found")
 }
 
-func (v *Verifier) replaceFile(path string, file []byte) error {
+func (v *DiskVerifier) replaceFile(path string, file []byte) error {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
 		log.Println("couldn't open for writing")

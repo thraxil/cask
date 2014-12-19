@@ -29,8 +29,8 @@ Features:
 * An active anti-entropy process runs on each node, checking
   integrity and replication of stored files and balancing across the
   cluster.
-* Pluggable Storage backends. Currently only disk is implemented, with
-  plans for S3 next.
+* Pluggable Storage backends. Currently local disk and S3 are implemented, with
+  plans for Dropbox, Drive, etc.
 
 What Cask doesn't do:
 
@@ -153,3 +153,9 @@ serve via TLS. Otherwise, you get plain HTTP.
 
 Be careful of self-signed certificates and such. Go's TLS client
 library is very picky about that sort of thing.
+
+CASK_S3_ACCESS_KEY, CASK_S3_SECRET_KEY, and CASK_S3_BUCKET
+----------------------------------------------------------
+
+To use S3 storage, you must set the `CASK_BACKEND` to 's3' and put in
+appropriate values for these.
