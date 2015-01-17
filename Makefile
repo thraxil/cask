@@ -11,3 +11,6 @@ install_deps:
 
 cluster: cask
 	python run_cluster.py
+
+install: cask
+	cp cask /usr/local/bin/

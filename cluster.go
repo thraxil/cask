@@ -218,7 +218,8 @@ func hashOrder(hash string, size int, ring []RingEntry) []Node {
 	// [7,8,9,10,1,2,3,4,5,6]
 	var partitionIndex = 0
 	for i, r := range ring {
-		if r.Hash > hash {
+		// TODO: how will we support other hash types?
+		if "sha1:"+r.Hash > hash {
 			partitionIndex = i
 			break
 		}
