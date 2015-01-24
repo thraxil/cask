@@ -64,6 +64,12 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 			http.Error(w, "invalid key\n", 400)
 			return
 		}
+		if inm := r.Header.Get("If-None-Match"); inm != "" {
+			if inm == "\""+key+"\"" {
+				w.WriteHeader(http.StatusNotModified)
+				return
+			}
+		}
 		if !s.Backend.Exists(*k) {
 			http.Error(w, "not found\n", 404)
 			return
@@ -80,6 +86,7 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 				return
 			}
 			w.Header().Set("Content-Type", "application/octet")
+			w.Header().Set("ETag", "\""+key+"\"")
 			w.Write(data)
 		}
 	}
@@ -110,7 +117,14 @@ func fileHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 			http.Error(w, "invalid key\n", 400)
 			return
 		}
+		if inm := r.Header.Get("If-None-Match"); inm != "" {
+			if inm == "\""+key+"\"" {
+				w.WriteHeader(http.StatusNotModified)
+				return
+			}
+		}
 		if serveDirect(w, *k, s) {
+			w.Header().Set("ETag", "\""+key+"\"")
 			return
 		}
 		data, err := s.Cluster.Retrieve(*k)
@@ -118,6 +132,7 @@ func fileHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 			http.Error(w, "not found", 404)
 			return
 		}
+		w.Header().Set("ETag", "\""+key+"\"")
 		w.Write(data)
 	} else {
 		http.Error(w, "bad request", 400)
