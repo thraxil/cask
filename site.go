@@ -50,3 +50,7 @@ func (s Site) Rebalance(key Key) error {
 func (s Site) Verify(path string, key Key, h string) error {
 	return s.verifier.Verify(path, key, h)
 }
+
+func (s Site) VerifyKey(key Key) error {
+	return s.verifier.VerifyKey(key)
+}

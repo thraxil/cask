@@ -103,12 +103,14 @@ func visitPreChecks(path string, f FileIsh, err error, c *Cluster) (bool, error)
 }
 
 type DiskVerifier struct {
+	b   DiskBackend
 	c   *Cluster
 	chF chan func()
 }
 
 func (b DiskBackend) NewVerifier(c *Cluster) Verifier {
 	v := &DiskVerifier{
+		b:   b,
 		c:   c,
 		chF: make(chan func()),
 	}
@@ -127,6 +129,33 @@ func (v *DiskVerifier) Verify(path string, key Key, h string) error {
 	go func() {
 		v.chF <- func() {
 			r <- v.doVerify(path, key, h)
+		}
+	}()
+	return <-r
+}
+
+// does the same thing as Verify(), but given only the key
+// so it is expected to get the path, compute the hash of the
+// file and then do the verify.
+func (v *DiskVerifier) VerifyKey(key Key) error {
+	r := make(chan error)
+	go func() {
+		v.chF <- func() {
+			path := v.b.Root + key.Algorithm + "/" + key.AsPath() + "/data"
+			h := sha1.New()
+			file, err := os.Open(path)
+			defer file.Close()
+			if err != nil {
+				log.Printf("error opening %s\n", path)
+				return
+			}
+			_, err = io.Copy(h, file)
+			if err != nil {
+				log.Printf("error copying %s\n", path)
+				return
+			}
+			hash := fmt.Sprintf("%x", h.Sum(nil))
+			r <- v.doVerify(path, key, hash)
 		}
 	}()
 	return <-r

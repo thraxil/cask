@@ -106,6 +106,11 @@ func (v *S3Verifier) Verify(path string, key Key, h string) error {
 	return nil
 }
 
+func (v *S3Verifier) VerifyKey(key Key) error {
+	// S3 doesn't need verification
+	return nil
+}
+
 func (b S3Backend) NewVerifier(c *Cluster) Verifier {
 	return &S3Verifier{}
 }

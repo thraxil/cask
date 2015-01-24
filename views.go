@@ -88,6 +88,11 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 			w.Header().Set("Content-Type", "application/octet")
 			w.Header().Set("ETag", "\""+key+"\"")
 			w.Write(data)
+			// kick off a background goroutine to do read-repair
+			go func() {
+				s.VerifyKey(*k)
+				s.Rebalance(*k)
+			}()
 		}
 	}
 }
@@ -104,6 +109,13 @@ func serveDirect(w http.ResponseWriter, key Key, s *Site) bool {
 	w.Header().Set("Content-Type", "application/octet")
 	w.Write(data)
 	log.Println("served direct")
+
+	// kick off a background goroutine to do read-repair
+	go func() {
+		s.VerifyKey(key)
+		s.Rebalance(key)
+	}()
+
 	return true
 }
 
