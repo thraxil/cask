@@ -32,19 +32,21 @@ func NewS3Backend(access_key, secret_key, bucket string) *S3Backend {
 	return &S3Backend{access_key, secret_key, bucket, mybucket}
 }
 
-func (s *S3Backend) Write(key Key, r io.Reader) {
+func (s *S3Backend) Write(key Key, r io.Reader) error {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		log.Println("error writing into buffer")
 		log.Println(err)
-		return
+		return err
 	}
 
 	err = s.bucket.Put(key.String(), b, "application/octet", s3.BucketOwnerFull)
 	if err != nil {
 		log.Println("uh oh. couldn't write to bucket")
 		log.Println(err)
+		return err
 	}
+	return nil
 }
 
 func (s S3Backend) Read(key Key) ([]byte, error) {

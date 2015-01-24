@@ -21,14 +21,30 @@ func NewDiskBackend(root string) *DiskBackend {
 	return &DiskBackend{Root: root}
 }
 
-func (d *DiskBackend) Write(key Key, r io.Reader) {
+func (d *DiskBackend) Write(key Key, r io.Reader) error {
 	path := d.Root + key.Algorithm + "/" + key.AsPath()
 	log.Println(fmt.Sprintf("writing to %s\n", path))
-	os.MkdirAll(path, 0755)
+	err := os.MkdirAll(path, 0755)
+	if err != nil {
+		log.Println("couldn't make directory path")
+		log.Println(err)
+		return err
+	}
 	fullpath := path + "/data"
-	f, _ := os.OpenFile(fullpath, os.O_CREATE|os.O_RDWR, 0644)
+	f, err := os.OpenFile(fullpath, os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		log.Println("couldn't write file")
+		log.Println(err)
+		return err
+	}
 	defer f.Close()
-	io.Copy(f, r)
+	_, err = io.Copy(f, r)
+	if err != nil {
+		log.Println("error copying data into file")
+		log.Println(err)
+		return err
+	}
+	return nil
 }
 
 func (d DiskBackend) Read(key Key) ([]byte, error) {
@@ -235,12 +251,17 @@ func (d DiskBackend) ActiveAntiEntropy(cluster *Cluster, site Site, interval int
 	AAE_OFFSET = rand.Intn(10000)
 	var jitter = 1
 	for {
+		_, err := ioutil.ReadDir(d.Root)
+		if err != nil {
+			fmt.Printf("Can't get a directory listing for %s. Let's fail fast.\n", d.Root)
+			os.Exit(1)
+		}
 		if AAE_SKIP >= AAE_OFFSET {
 			jitter = rand.Intn(5)
 			time.Sleep(time.Duration(interval+jitter) * time.Second)
 			log.Println("AAE starting at the top")
 		}
-		err := filepath.Walk(d.Root, makeVisitor(visit, cluster, site))
+		err = filepath.Walk(d.Root, makeVisitor(visit, cluster, site))
 		if err != nil {
 			log.Printf("filepath.Walk() returned %v\n", err)
 		}

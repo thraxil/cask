@@ -44,7 +44,11 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 				return
 			}
 			f.Seek(0, 0)
-			s.Backend.Write(*key, f)
+			err = s.Backend.Write(*key, f)
+			if err != nil {
+				http.Error(w, "could not write file", 500)
+				return
+			}
 			fmt.Fprintf(w, key.String())
 			return
 		} else {
