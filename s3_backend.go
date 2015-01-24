@@ -32,6 +32,10 @@ func NewS3Backend(access_key, secret_key, bucket string) *S3Backend {
 	return &S3Backend{access_key, secret_key, bucket, mybucket}
 }
 
+func (d S3Backend) String() string {
+	return "S3"
+}
+
 func (s *S3Backend) Write(key Key, r io.Reader) error {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {

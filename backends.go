@@ -1,8 +1,12 @@
 package main
 
-import "io"
+import (
+	"fmt"
+	"io"
+)
 
 type Backend interface {
+	fmt.Stringer
 	Write(key Key, r io.Reader) error
 	Read(key Key) ([]byte, error)
 	Exists(key Key) bool

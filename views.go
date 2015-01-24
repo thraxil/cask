@@ -290,6 +290,7 @@ const cluster_template = `
 <div class="container">
 <h1>Node: {{.Myself.UUID}}</h1>
 <table class="table">
+<tr><th>Backend</th><td>{{.Site.Backend}}</td></tr>
 <tr><th>Base</th><td>{{.Myself.BaseUrl}}</td></tr>
 <tr><th>Writeable</th><td>{{.Myself.Writeable}}</td></tr>
 <tr><th>Replication</th><td>{{.Site.Replication}}</td></tr>

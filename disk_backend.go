@@ -21,6 +21,10 @@ func NewDiskBackend(root string) *DiskBackend {
 	return &DiskBackend{Root: root}
 }
 
+func (d DiskBackend) String() string {
+	return "Disk"
+}
+
 func (d *DiskBackend) Write(key Key, r io.Reader) error {
 	path := d.Root + key.Algorithm + "/" + key.AsPath()
 	log.Println(fmt.Sprintf("writing to %s\n", path))
