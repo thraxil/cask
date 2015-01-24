@@ -7,7 +7,7 @@ import (
 
 type Backend interface {
 	fmt.Stringer
-	Write(key Key, r io.Reader) error
+	Write(key Key, r io.ReadCloser) error
 	Read(key Key) ([]byte, error)
 	Exists(key Key) bool
 	Delete(key Key) error

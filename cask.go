@@ -17,14 +17,20 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, *Site), s *Site) ht
 }
 
 type Config struct {
-	Writeable         bool
-	BaseUrl           string `envconfig:"BASE_URL"`
-	UUID              string
-	Backend           string
-	DiskBackendRoot   string `envconfig:"DISK_BACKEND_ROOT"`
-	S3AccessKey       string `envconfig:"S3_ACCESS_KEY"`
-	S3SecretKey       string `envconfig:"S3_SECRET_KEY"`
-	S3Bucket          string `envconfig:"S3_BUCKET"`
+	Writeable       bool
+	BaseUrl         string `envconfig:"BASE_URL"`
+	UUID            string
+	Backend         string
+	DiskBackendRoot string `envconfig:"DISK_BACKEND_ROOT"`
+
+	S3AccessKey string `envconfig:"S3_ACCESS_KEY"`
+	S3SecretKey string `envconfig:"S3_SECRET_KEY"`
+	S3Bucket    string `envconfig:"S3_BUCKET"`
+
+	DBAccessKey string `envconfig:"DROPBOX_ACCESS_KEY"`
+	DBSecretKey string `envconfig:"DROPBOX_SECRET_KEY"`
+	DBToken     string `envconfig:"DROPBOX_TOKEN"`
+
 	Port              int
 	Neighbors         string
 	Replication       int
@@ -53,6 +59,12 @@ func main() {
 			log.Fatal("need S3 ACCESS_KEY, SECRET_KEY, and bucket all configured")
 		} else {
 			backend = NewS3Backend(c.S3AccessKey, c.S3SecretKey, c.S3Bucket)
+		}
+	} else if c.Backend == "dropbox" {
+		if c.DBAccessKey == "" || c.DBSecretKey == "" {
+			log.Fatal("need dropbox ACCESS_KEY and SECRET_KEY")
+		} else {
+			backend = NewDropBoxBackend(c.DBAccessKey, c.DBSecretKey, c.DBToken)
 		}
 	}
 	if c.MaxProcs > 0 {

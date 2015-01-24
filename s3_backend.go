@@ -36,7 +36,7 @@ func (d S3Backend) String() string {
 	return "S3"
 }
 
-func (s *S3Backend) Write(key Key, r io.Reader) error {
+func (s *S3Backend) Write(key Key, r io.ReadCloser) error {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		log.Println("error writing into buffer")

@@ -25,7 +25,7 @@ func (d DiskBackend) String() string {
 	return "Disk"
 }
 
-func (d *DiskBackend) Write(key Key, r io.Reader) error {
+func (d *DiskBackend) Write(key Key, r io.ReadCloser) error {
 	path := d.Root + key.Algorithm + "/" + key.AsPath()
 	log.Println(fmt.Sprintf("writing to %s\n", path))
 	err := os.MkdirAll(path, 0755)
