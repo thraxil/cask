@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"runtime"
 	"strings"
 
 	"github.com/kelseyhightower/envconfig"
@@ -31,6 +32,7 @@ type Config struct {
 	ClusterSecret     string `envconfig:"CLUSTER_SECRET"`
 	HeartbeatInterval int    `envconfig:"HEARTBEAT_INTERVAL"`
 	AAEInterval       int    `envconfig:"AAE_INTERVAL"`
+	MaxProcs          int    `envconfig:"MAX_PROCS"`
 	SSL_Cert          string `envconfig:"SSL_CERT"`
 	SSL_Key           string `envconfig:"SSL_Key"`
 }
@@ -53,7 +55,12 @@ func main() {
 			backend = NewS3Backend(c.S3AccessKey, c.S3SecretKey, c.S3Bucket)
 		}
 	}
-
+	if c.MaxProcs > 0 {
+		log.Printf("max procs: %d\n", c.MaxProcs)
+		runtime.GOMAXPROCS(c.MaxProcs)
+	} else {
+		runtime.GOMAXPROCS(runtime.NumCPU())
+	}
 	cluster := NewCluster(*n, c.ClusterSecret, c.HeartbeatInterval)
 	s := NewSite(n, cluster, backend, c.Replication, c.MaxReplication, c.ClusterSecret, c.AAEInterval)
 	if c.Neighbors != "" {

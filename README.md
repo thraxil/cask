@@ -144,6 +144,13 @@ repository. So think about how important that refresh period is and
 balance it against how much CPU and bandwidth the AAE system will
 consume.
 
+CASK_MAX_PROCS
+--------------
+
+Maximum number of CPUs that can be executing simultaneously. Defaults
+to the number of CPU cores on your system. Set it lower if you want to
+reduce concurrency for some reason.
+
 CASK_SSL_CERTIFICATE and CASK_SSL_KEY
 -------------------------------------
 
