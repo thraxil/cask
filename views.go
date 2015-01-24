@@ -297,8 +297,8 @@ const cluster_template = `
 <td>{{.UUID}}</td>
 <td><a href="{{.BaseUrl}}">{{.BaseUrl}}</a></td>
 <td>{{if .Writeable}}<span class="text-success">yes</span>{{else}}<span class="text-danger">read-only</span>{{end}}</td>
-<td>{{.LastSeen}}</td>
-<td>{{if .LastFailed.IsZero}}-{{else}}{{.LastFailed}}{{end}}</td>
+<td>{{.LastSeenFormatted}}</td>
+<td>{{if .LastFailed.IsZero}}-{{else}}{{.LastFailedFormatted}}{{end}}</td>
 </tr>
 {{end}}
 {{end}}

@@ -30,6 +30,14 @@ func NewNode(uuid, base_url string, writeable bool) *Node {
 	}
 }
 
+func (n Node) LastSeenFormatted() string {
+	return n.LastSeen.Format("2006-01-02 15:04:05")
+}
+
+func (n Node) LastFailedFormatted() string {
+	return n.LastFailed.Format("2006-01-02 15:04:05")
+}
+
 func (n Node) AddFileUrl() string {
 	return n.BaseUrl + "/local/"
 }
