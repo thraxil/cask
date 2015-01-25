@@ -5,7 +5,9 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/stacktic/dropbox"
 )
@@ -88,11 +90,48 @@ func (s *DropBoxBackend) Delete(key Key) error {
 	return err
 }
 
+func (s *DropBoxBackend) AAEEntry(e dropbox.Entry, site Site, interval int) {
+	if e.IsDir {
+		ent, err := s.db.Metadata(e.Path, true, false, "", "", -1)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		for _, c := range ent.Contents {
+			s.AAEEntry(c, site, interval)
+		}
+	} else {
+		log.Println(e.Path)
+		k, err := KeyFromPath(e.Path)
+		if err != nil {
+			log.Println("couldn't make key from path")
+			return
+		}
+		err = site.Rebalance(*k)
+		if err != nil {
+			log.Println(err)
+		}
+		jitter := rand.Intn(5)
+		time.Sleep(time.Duration(interval+jitter) * time.Second)
+	}
+}
+
 func (s *DropBoxBackend) ActiveAntiEntropy(cluster *Cluster, site Site, interval int) {
 	log.Println("DropBox AAE starting")
 	// DropBox backend doesn't need verification, just rebalancing
 
-	// don't know how to get a list of files/dirs on dropbox yet...
+	for {
+		log.Println("AAE starting at the top")
+
+		ent, err := s.db.Metadata("", true, false, "", "", -1)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		for _, c := range ent.Contents {
+			s.AAEEntry(c, site, interval)
+		}
+	}
 }
 
 type DropBoxVerifier struct{}

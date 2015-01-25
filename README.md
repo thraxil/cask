@@ -183,5 +183,3 @@ That will give you at least the access key and secret key. If you
 start the cask node without the token set, it will send you to a
 page to complete the authorization and give you the token.
 
-Please note that currently the dropbox backend does not do Active Anti
-Entropy, so it won't automatically rebalance files stored on that node.
