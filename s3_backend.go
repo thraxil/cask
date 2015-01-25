@@ -72,7 +72,7 @@ func (s *S3Backend) Delete(key Key) error {
 func (s *S3Backend) ActiveAntiEntropy(cluster *Cluster, site Site, interval int) {
 	log.Println("S3 AAE starting")
 	// S3 backend doesn't need verification, just rebalancing
-
+	rand.Seed(time.Now().UnixNano())
 	AAE_OFFSET = rand.Intn(10000)
 	var jitter = 1
 	for {
@@ -82,7 +82,11 @@ func (s *S3Backend) ActiveAntiEntropy(cluster *Cluster, site Site, interval int)
 		if err != nil {
 			log.Fatal(err)
 		}
-		for _, v := range res.Contents {
+
+		n := len(res.Contents)
+		idxes := rand.Perm(n)
+		for _, i := range idxes {
+			v := res.Contents[i]
 			jitter = rand.Intn(5)
 			time.Sleep(time.Duration(interval+jitter) * time.Second)
 

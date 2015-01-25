@@ -97,8 +97,10 @@ func (s *DropBoxBackend) AAEEntry(e dropbox.Entry, site Site, interval int) {
 			log.Println(err)
 			return
 		}
-		for _, c := range ent.Contents {
-			s.AAEEntry(c, site, interval)
+		n := len(ent.Contents)
+		idxes := rand.Perm(n)
+		for _, i := range idxes {
+			s.AAEEntry(ent.Contents[i], site, interval)
 		}
 	} else {
 		log.Println(e.Path)
@@ -119,7 +121,7 @@ func (s *DropBoxBackend) AAEEntry(e dropbox.Entry, site Site, interval int) {
 func (s *DropBoxBackend) ActiveAntiEntropy(cluster *Cluster, site Site, interval int) {
 	log.Println("DropBox AAE starting")
 	// DropBox backend doesn't need verification, just rebalancing
-
+	rand.Seed(time.Now().UnixNano())
 	for {
 		log.Println("AAE starting at the top")
 
@@ -128,8 +130,10 @@ func (s *DropBoxBackend) ActiveAntiEntropy(cluster *Cluster, site Site, interval
 			log.Println(err)
 			return
 		}
-		for _, c := range ent.Contents {
-			s.AAEEntry(c, site, interval)
+		n := len(ent.Contents)
+		idxes := rand.Perm(n)
+		for _, i := range idxes {
+			s.AAEEntry(ent.Contents[i], site, interval)
 		}
 	}
 }
