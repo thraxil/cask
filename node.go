@@ -15,9 +15,9 @@ import (
 )
 
 type Node struct {
-	UUID       string    `json:uuid`
-	BaseUrl    string    `json:base_url`
-	Writeable  bool      `json:writeable`
+	UUID       string    `json:"uuid"`
+	BaseUrl    string    `json:"base_url"`
+	Writeable  bool      `json:"writeable"`
 	LastSeen   time.Time `json:"last_seen"`
 	LastFailed time.Time `json:"last_failed"`
 }
