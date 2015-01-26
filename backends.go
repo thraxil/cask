@@ -5,12 +5,12 @@ import (
 	"io"
 )
 
-type Backend interface {
+type backend interface {
 	fmt.Stringer
-	Write(key Key, r io.ReadCloser) error
-	Read(key Key) ([]byte, error)
-	Exists(key Key) bool
-	Delete(key Key) error
-	ActiveAntiEntropy(cluster *Cluster, site Site, interval int)
-	NewVerifier(cluster *Cluster) Verifier
+	Write(key, io.ReadCloser) error
+	Read(key) ([]byte, error)
+	Exists(key) bool
+	Delete(key) error
+	ActiveAntiEntropy(*cluster, site, int)
+	NewVerifier(*cluster) verifier
 }

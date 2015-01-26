@@ -11,17 +11,17 @@ import (
 	"github.com/mitchellh/goamz/s3"
 )
 
-type S3Backend struct {
+type s3Backend struct {
 	AccessKey  string
 	SecretKey  string
 	BucketName string
 	bucket     *s3.Bucket
 }
 
-func NewS3Backend(access_key, secret_key, bucket string) *S3Backend {
+func newS3Backend(accessKey, secretKey, bucket string) *s3Backend {
 	auth := aws.Auth{
-		AccessKey: access_key,
-		SecretKey: secret_key,
+		AccessKey: accessKey,
+		SecretKey: secretKey,
 	}
 	// TODO: allow configuration of buckets in other regions
 	useast := aws.USEast
@@ -29,14 +29,14 @@ func NewS3Backend(access_key, secret_key, bucket string) *S3Backend {
 	connection := s3.New(auth, useast)
 	mybucket := connection.Bucket(bucket)
 
-	return &S3Backend{access_key, secret_key, bucket, mybucket}
+	return &s3Backend{accessKey, secretKey, bucket, mybucket}
 }
 
-func (d S3Backend) String() string {
+func (s s3Backend) String() string {
 	return "S3"
 }
 
-func (s *S3Backend) Write(key Key, r io.ReadCloser) error {
+func (s *s3Backend) Write(key key, r io.ReadCloser) error {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		log.Println("error writing into buffer")
@@ -53,11 +53,11 @@ func (s *S3Backend) Write(key Key, r io.ReadCloser) error {
 	return nil
 }
 
-func (s S3Backend) Read(key Key) ([]byte, error) {
+func (s s3Backend) Read(key key) ([]byte, error) {
 	return s.bucket.Get(key.String())
 }
 
-func (s S3Backend) Exists(key Key) bool {
+func (s s3Backend) Exists(key key) bool {
 	ls, err := s.bucket.List(key.String(), "", "", 1)
 	if err != nil {
 		return false
@@ -65,15 +65,14 @@ func (s S3Backend) Exists(key Key) bool {
 	return len(ls.Contents) == 1
 }
 
-func (s *S3Backend) Delete(key Key) error {
+func (s *s3Backend) Delete(key key) error {
 	return s.bucket.Del(key.String())
 }
 
-func (s *S3Backend) ActiveAntiEntropy(cluster *Cluster, site Site, interval int) {
+func (s *s3Backend) ActiveAntiEntropy(cluster *cluster, site site, interval int) {
 	log.Println("S3 AAE starting")
 	// S3 backend doesn't need verification, just rebalancing
 	rand.Seed(time.Now().UnixNano())
-	AAE_OFFSET = rand.Intn(10000)
 	var jitter = 1
 	for {
 		log.Println("AAE starting at the top")
@@ -90,7 +89,7 @@ func (s *S3Backend) ActiveAntiEntropy(cluster *Cluster, site Site, interval int)
 			jitter = rand.Intn(5)
 			time.Sleep(time.Duration(interval+jitter) * time.Second)
 
-			key, err := KeyFromString(v.Key)
+			key, err := keyFromString(v.Key)
 			if err != nil {
 				continue
 			}
@@ -103,18 +102,18 @@ func (s *S3Backend) ActiveAntiEntropy(cluster *Cluster, site Site, interval int)
 
 }
 
-type S3Verifier struct{}
+type s3Verifier struct{}
 
-func (v *S3Verifier) Verify(path string, key Key, h string) error {
+func (v *s3Verifier) Verify(path string, key key, h string) error {
 	// S3 doesn't need verification
 	return nil
 }
 
-func (v *S3Verifier) VerifyKey(key Key) error {
+func (v *s3Verifier) VerifyKey(key key) error {
 	// S3 doesn't need verification
 	return nil
 }
 
-func (b S3Backend) NewVerifier(c *Cluster) Verifier {
-	return &S3Verifier{}
+func (s s3Backend) NewVerifier(c *cluster) verifier {
+	return &s3Verifier{}
 }

@@ -14,7 +14,7 @@ import (
 
 // read/write file requests that shall only touch
 // the current node. No cluster interaction.
-func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+func localHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	secret := r.Header.Get("X-Cask-Cluster-Secret")
 	if !s.Cluster.CheckSecret(secret) {
 		log.Println("unauthorized local file request")
@@ -33,7 +33,7 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 			defer f.Close()
 			h := sha1.New()
 			io.Copy(h, f)
-			key, err := KeyFromString("sha1:" + fmt.Sprintf("%x", h.Sum(nil)))
+			key, err := keyFromString("sha1:" + fmt.Sprintf("%x", h.Sum(nil)))
 			if err != nil {
 				http.Error(w, "bad hash", 500)
 				return
@@ -51,15 +51,14 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 			}
 			fmt.Fprintf(w, key.String())
 			return
-		} else {
-			fmt.Fprintf(w, "show form/handle post\n")
-			return
 		}
+		fmt.Fprintf(w, "show form/handle post\n")
+		return
 	}
 	if len(parts) == 4 {
 		key := parts[2]
 		log.Printf("%s /local/%s/\n", r.Method, parts[2])
-		k, err := KeyFromString(key)
+		k, err := keyFromString(key)
 		if err != nil {
 			http.Error(w, "invalid key\n", 400)
 			return
@@ -97,7 +96,7 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	}
 }
 
-func serveDirect(w http.ResponseWriter, key Key, s *Site) bool {
+func serveDirect(w http.ResponseWriter, key key, s *site) bool {
 	if !s.Backend.Exists(key) {
 		return false
 	}
@@ -119,12 +118,12 @@ func serveDirect(w http.ResponseWriter, key Key, s *Site) bool {
 	return true
 }
 
-func fileHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+func fileHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	parts := strings.Split(r.URL.String(), "/")
 	if len(parts) == 4 {
 		key := parts[2]
 		log.Printf("%s /file/%s/\n", r.Method, parts[2])
-		k, err := KeyFromString(key)
+		k, err := keyFromString(key)
 		if err != nil {
 			http.Error(w, "invalid key\n", 400)
 			return
@@ -151,7 +150,7 @@ func fileHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	}
 }
 
-func indexHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+func indexHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	if r.Method == "GET" {
 		clusterInfoHandler(w, r, s)
 		return
@@ -165,13 +164,13 @@ func indexHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 
 type clusterInfoPage struct {
 	Title     string
-	Cluster   *Cluster
-	Myself    *Node
-	Neighbors []Node
-	Site      *Site
+	Cluster   *cluster
+	Myself    *node
+	Neighbors []node
+	Site      *site
 }
 
-func clusterInfoHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+func clusterInfoHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	p := clusterInfoPage{
 		Title:     "cluster status",
 		Cluster:   s.Cluster,
@@ -179,33 +178,33 @@ func clusterInfoHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 		Neighbors: s.Cluster.NeighborsInclusive(),
 		Site:      s,
 	}
-	t, _ := template.New("cluster").Parse(cluster_template)
+	t, _ := template.New("cluster").Parse(clusterTemplate)
 	t.Execute(w, p)
 }
 
-var DEFAULT_REPLICATION = 3
-var MIN_REPLICATION = 1
+var defaultReplication = 3
+var minReplication = 1
 
 type postResponse struct {
 	Key     string `json:"key"`
 	Success bool   `json:"success"`
 }
 
-func postFileHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+func postFileHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	log.Println("add a file")
 
 	f, _, _ := r.FormFile("file")
 	defer f.Close()
 	h := sha1.New()
 	io.Copy(h, f)
-	key, err := KeyFromString("sha1:" + fmt.Sprintf("%x", h.Sum(nil)))
+	key, err := keyFromString("sha1:" + fmt.Sprintf("%x", h.Sum(nil)))
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "bad hash", 500)
 		return
 	}
 	f.Seek(0, 0)
-	success := s.Cluster.AddFile(*key, f, DEFAULT_REPLICATION, MIN_REPLICATION)
+	success := s.Cluster.AddFile(*key, f, defaultReplication, minReplication)
 	pr := postResponse{
 		Key:     key.String(),
 		Success: success,
@@ -218,7 +217,7 @@ func postFileHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	w.Write(b)
 }
 
-func joinHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+func joinHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	if r.Method == "POST" {
 		if r.FormValue("url") == "" {
 			fmt.Fprint(w, "no url specified")
@@ -240,11 +239,11 @@ func joinHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 		fmt.Fprintf(w, fmt.Sprintf("Added node [%s]", n.UUID))
 	} else {
 		// show form
-		w.Write([]byte(join_template))
+		w.Write([]byte(joinTemplate))
 	}
 }
 
-func heartbeatHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+func heartbeatHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	if r.Method == "POST" {
 		decoder := json.NewDecoder(r.Body)
 		var hb heartbeat
@@ -258,8 +257,8 @@ func heartbeatHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 			http.Error(w, "sorry, need the secret knock", 403)
 			return
 		}
-		n := Node{
-			UUID: hb.UUID, BaseUrl: hb.BaseUrl, Writeable: hb.Writeable,
+		n := node{
+			UUID: hb.UUID, BaseURL: hb.BaseURL, Writeable: hb.Writeable,
 			LastSeen: time.Now()}
 		s.Cluster.UpdateNeighbor(n)
 		for _, neighbor := range hb.Neighbors {
@@ -270,8 +269,8 @@ func heartbeatHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 			_, found := s.Cluster.FindNeighborByUUID(neighbor.UUID)
 			if !found {
 				log.Println("learned about a new neighbor via heartbeat")
-				log.Println(neighbor.UUID, neighbor.BaseUrl)
-				s.Cluster.JoinNeighbor(neighbor.BaseUrl)
+				log.Println(neighbor.UUID, neighbor.BaseURL)
+				s.Cluster.JoinNeighbor(neighbor.BaseURL)
 			}
 		}
 	} else {
@@ -279,7 +278,7 @@ func heartbeatHandler(w http.ResponseWriter, r *http.Request, s *Site) {
 	}
 }
 
-func configHandler(w http.ResponseWriter, r *http.Request, s *Site) {
+func configHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	b, err := json.Marshal(s.Node)
 	if err != nil {
 		log.Println(err)
@@ -292,7 +291,7 @@ func faviconHandler(w http.ResponseWriter, r *http.Request) {
 	// just ignore this crap
 }
 
-const cluster_template = `
+const clusterTemplate = `
 <html>
 <head>
 <title>{{.Title}}</title>
@@ -303,7 +302,7 @@ const cluster_template = `
 <h1>Node: {{.Myself.UUID}}</h1>
 <table class="table">
 <tr><th>Backend</th><td>{{.Site.Backend}}</td></tr>
-<tr><th>Base</th><td>{{.Myself.BaseUrl}}</td></tr>
+<tr><th>Base</th><td>{{.Myself.BaseURL}}</td></tr>
 <tr><th>Writeable</th><td>{{.Myself.Writeable}}</td></tr>
 <tr><th>Replication</th><td>{{.Site.Replication}}</td></tr>
 <tr><th>Max Replication</th><td>{{.Site.MaxReplication}}</td></tr>
@@ -323,7 +322,7 @@ const cluster_template = `
 {{else}}
 <tr {{if .Unhealthy}}class="danger"{{end}}>
 <td>{{.UUID}}</td>
-<td><a href="{{.BaseUrl}}">{{.BaseUrl}}</a></td>
+<td><a href="{{.BaseURL}}">{{.BaseURL}}</a></td>
 <td>{{if .Writeable}}<span class="text-success">yes</span>{{else}}<span class="text-danger">read-only</span>{{end}}</td>
 <td>{{.LastSeenFormatted}}</td>
 <td>{{if .LastFailed.IsZero}}-{{else}}{{.LastFailedFormatted}}{{end}}</td>
@@ -342,7 +341,7 @@ const cluster_template = `
 </html>
 `
 
-const join_template = `
+const joinTemplate = `
 <html><head><title>Add Node</title></head>
 <body>
 <h1>Add Node</h1>

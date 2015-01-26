@@ -10,15 +10,15 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
-func makeHandler(fn func(http.ResponseWriter, *http.Request, *Site), s *Site) http.HandlerFunc {
+func makeHandler(fn func(http.ResponseWriter, *http.Request, *site), s *site) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fn(w, r, s)
 	}
 }
 
-type Config struct {
+type config struct {
 	Writeable       bool
-	BaseUrl         string `envconfig:"BASE_URL"`
+	BaseURL         string `envconfig:"BASE_URL"`
 	UUID            string
 	Backend         string
 	DiskBackendRoot string `envconfig:"DISK_BACKEND_ROOT"`
@@ -39,32 +39,32 @@ type Config struct {
 	HeartbeatInterval int    `envconfig:"HEARTBEAT_INTERVAL"`
 	AAEInterval       int    `envconfig:"AAE_INTERVAL"`
 	MaxProcs          int    `envconfig:"MAX_PROCS"`
-	SSL_Cert          string `envconfig:"SSL_CERT"`
-	SSL_Key           string `envconfig:"SSL_Key"`
+	SSLCert           string `envconfig:"SSL_CERT"`
+	SSLKey            string `envconfig:"SSL_Key"`
 }
 
 func main() {
-	var c Config
+	var c config
 	err := envconfig.Process("cask", &c)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 	log.SetPrefix(c.UUID[:8] + " ")
-	n := NewNode(c.UUID, c.BaseUrl, c.Writeable)
-	var backend Backend
+	n := newNode(c.UUID, c.BaseURL, c.Writeable)
+	var backend backend
 	if c.Backend == "disk" {
-		backend = NewDiskBackend(c.DiskBackendRoot)
+		backend = newDiskBackend(c.DiskBackendRoot)
 	} else if c.Backend == "s3" {
 		if c.S3AccessKey == "" || c.S3SecretKey == "" || c.S3Bucket == "" {
 			log.Fatal("need S3 ACCESS_KEY, SECRET_KEY, and bucket all configured")
 		} else {
-			backend = NewS3Backend(c.S3AccessKey, c.S3SecretKey, c.S3Bucket)
+			backend = newS3Backend(c.S3AccessKey, c.S3SecretKey, c.S3Bucket)
 		}
 	} else if c.Backend == "dropbox" {
 		if c.DBAccessKey == "" || c.DBSecretKey == "" {
 			log.Fatal("need dropbox ACCESS_KEY and SECRET_KEY")
 		} else {
-			backend = NewDropBoxBackend(c.DBAccessKey, c.DBSecretKey, c.DBToken)
+			backend = newDropboxBackend(c.DBAccessKey, c.DBSecretKey, c.DBToken)
 		}
 	}
 	if c.MaxProcs > 0 {
@@ -73,8 +73,8 @@ func main() {
 	} else {
 		runtime.GOMAXPROCS(runtime.NumCPU())
 	}
-	cluster := NewCluster(*n, c.ClusterSecret, c.HeartbeatInterval)
-	s := NewSite(n, cluster, backend, c.Replication, c.MaxReplication, c.ClusterSecret, c.AAEInterval)
+	cluster := newCluster(*n, c.ClusterSecret, c.HeartbeatInterval)
+	s := newSite(n, cluster, backend, c.Replication, c.MaxReplication, c.ClusterSecret, c.AAEInterval)
 	if c.Neighbors != "" {
 		go cluster.BootstrapNeighbors(c.Neighbors)
 	}
@@ -85,7 +85,7 @@ func main() {
 	log.Println("=== Cask Node starting ================")
 	log.Println("Root: " + c.DiskBackendRoot)
 	log.Println("UUID: " + c.UUID)
-	log.Println("Base URL: " + c.BaseUrl)
+	log.Println("Base URL: " + c.BaseURL)
 	log.Println("=======================================")
 
 	http.HandleFunc("/", makeHandler(indexHandler, s))
@@ -97,8 +97,8 @@ func main() {
 
 	http.HandleFunc("/favicon.ico", faviconHandler)
 
-	if c.SSL_Cert != "" && c.SSL_Key != "" && strings.HasPrefix(c.BaseUrl, "https:") {
-		log.Fatal(http.ListenAndServeTLS(fmt.Sprintf(":%d", c.Port), c.SSL_Cert, c.SSL_Key, nil))
+	if c.SSLCert != "" && c.SSLKey != "" && strings.HasPrefix(c.BaseURL, "https:") {
+		log.Fatal(http.ListenAndServeTLS(fmt.Sprintf(":%d", c.Port), c.SSLCert, c.SSLKey, nil))
 	} else {
 		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", c.Port), nil))
 	}

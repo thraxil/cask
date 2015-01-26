@@ -14,28 +14,28 @@ import (
 	"time"
 )
 
-const REPLICAS = 16
+const replicas = 16
 
-type Cluster struct {
-	Myself            Node
+type cluster struct {
+	Myself            node
 	secret            string
-	neighbors         map[string]Node
+	neighbors         map[string]node
 	chF               chan func()
 	HeartbeatInterval int
 }
 
-func NewCluster(myself Node, secret string, heartbeat_interval int) *Cluster {
+func newCluster(myself node, secret string, heartbeatInterval int) *cluster {
 	rand.Seed(time.Now().UnixNano())
-	if heartbeat_interval < 1 {
+	if heartbeatInterval < 1 {
 		// unset. default to 1 minute
-		heartbeat_interval = 60
+		heartbeatInterval = 60
 	}
-	c := &Cluster{
+	c := &cluster{
 		Myself:            myself,
 		secret:            secret,
-		neighbors:         make(map[string]Node),
+		neighbors:         make(map[string]node),
 		chF:               make(chan func()),
-		HeartbeatInterval: heartbeat_interval,
+		HeartbeatInterval: heartbeatInterval,
 	}
 	go c.backend()
 
@@ -43,33 +43,33 @@ func NewCluster(myself Node, secret string, heartbeat_interval int) *Cluster {
 }
 
 // serialize all reads/writes through here
-func (c *Cluster) backend() {
+func (c *cluster) backend() {
 	for f := range c.chF {
 		f()
 	}
 }
 
-func (c *Cluster) AddNeighbor(n Node) {
+func (c *cluster) AddNeighbor(n node) {
 	c.chF <- func() {
 		c.neighbors[n.UUID] = n
 	}
 }
 
-func (c *Cluster) RemoveNeighbor(n Node) {
+func (c *cluster) RemoveNeighbor(n node) {
 	c.chF <- func() {
 		delete(c.neighbors, n.UUID)
 	}
 }
 
 type gnresp struct {
-	N []Node
+	N []node
 }
 
-func (c *Cluster) GetNeighbors() []Node {
+func (c *cluster) GetNeighbors() []node {
 	r := make(chan gnresp)
 	go func() {
 		c.chF <- func() {
-			neighbs := make([]Node, len(c.neighbors))
+			neighbs := make([]node, len(c.neighbors))
 			var i = 0
 			for _, value := range c.neighbors {
 				neighbs[i] = value
@@ -83,11 +83,11 @@ func (c *Cluster) GetNeighbors() []Node {
 }
 
 type fResp struct {
-	N   *Node
+	N   *node
 	Err bool
 }
 
-func (c Cluster) FindNeighborByUUID(uuid string) (*Node, bool) {
+func (c cluster) FindNeighborByUUID(uuid string) (*node, bool) {
 	r := make(chan fResp)
 	go func() {
 		c.chF <- func() {
@@ -99,10 +99,10 @@ func (c Cluster) FindNeighborByUUID(uuid string) (*Node, bool) {
 	return resp.N, resp.Err
 }
 
-func (c *Cluster) UpdateNeighbor(neighbor Node) {
+func (c *cluster) UpdateNeighbor(neighbor node) {
 	c.chF <- func() {
 		if n, ok := c.neighbors[neighbor.UUID]; ok {
-			n.BaseUrl = neighbor.BaseUrl
+			n.BaseURL = neighbor.BaseURL
 			n.Writeable = neighbor.Writeable
 			if neighbor.LastSeen.Sub(n.LastSeen) > 0 {
 				n.LastSeen = neighbor.LastSeen
@@ -112,7 +112,7 @@ func (c *Cluster) UpdateNeighbor(neighbor Node) {
 	}
 }
 
-func (c *Cluster) FailedNeighbor(neighbor Node) {
+func (c *cluster) FailedNeighbor(neighbor node) {
 	c.chF <- func() {
 		if n, ok := c.neighbors[neighbor.UUID]; ok {
 			n.Writeable = false
@@ -123,17 +123,17 @@ func (c *Cluster) FailedNeighbor(neighbor Node) {
 }
 
 type listResp struct {
-	Ns []Node
+	Ns []node
 }
 
-func (c Cluster) NeighborsInclusive() []Node {
+func (c cluster) NeighborsInclusive() []node {
 	r := make(chan listResp)
 	go func() {
 		c.chF <- func() {
-			a := make([]Node, 1)
+			a := make([]node, 1)
 			a[0] = c.Myself
 
-			neighbs := make([]Node, len(c.neighbors))
+			neighbs := make([]node, len(c.neighbors))
 			var i = 0
 			for _, value := range c.neighbors {
 				neighbs[i] = value
@@ -148,9 +148,9 @@ func (c Cluster) NeighborsInclusive() []Node {
 	return resp.Ns
 }
 
-func (c Cluster) WriteableNeighbors() []Node {
+func (c cluster) WriteableNeighbors() []node {
 	var all = c.NeighborsInclusive()
-	var p []Node // == nil
+	var p []node // == nil
 	for _, i := range all {
 		if i.Writeable {
 			p = append(p, i)
@@ -159,34 +159,34 @@ func (c Cluster) WriteableNeighbors() []Node {
 	return p
 }
 
-type RingEntry struct {
-	Node Node
+type ringEntry struct {
+	Node node
 	Hash string
 }
 
-type RingEntryList []RingEntry
+type ringEntryList []ringEntry
 
-func (p RingEntryList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
-func (p RingEntryList) Len() int           { return len(p) }
-func (p RingEntryList) Less(i, j int) bool { return p[i].Hash < p[j].Hash }
+func (p ringEntryList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p ringEntryList) Len() int           { return len(p) }
+func (p ringEntryList) Less(i, j int) bool { return p[i].Hash < p[j].Hash }
 
-func (c Cluster) Ring() RingEntryList {
+func (c cluster) Ring() ringEntryList {
 	// TODO: cache the ring so we don't have to regenerate
 	// every time. it only changes when a node joins or leaves
 	return neighborsToRing(c.NeighborsInclusive())
 }
 
-func (c Cluster) WriteRing() RingEntryList {
+func (c cluster) WriteRing() ringEntryList {
 	return neighborsToRing(c.WriteableNeighbors())
 }
 
-func neighborsToRing(neighbors []Node) RingEntryList {
-	keys := make(RingEntryList, REPLICAS*len(neighbors))
+func neighborsToRing(neighbors []node) ringEntryList {
+	keys := make(ringEntryList, replicas*len(neighbors))
 	for i := range neighbors {
 		node := neighbors[i]
 		nkeys := node.HashKeys()
 		for j := range nkeys {
-			keys[i*REPLICAS+j] = RingEntry{Node: node, Hash: nkeys[j]}
+			keys[i*replicas+j] = ringEntry{Node: node, Hash: nkeys[j]}
 		}
 	}
 	sort.Sort(keys)
@@ -195,17 +195,17 @@ func neighborsToRing(neighbors []Node) RingEntryList {
 
 // returns the list of all nodes in the order
 // that the given hash will choose to write to them
-func (c Cluster) WriteOrder(hash string) []Node {
+func (c cluster) WriteOrder(hash string) []node {
 	return hashOrder(hash, len(c.GetNeighbors())+1, c.WriteRing())
 }
 
 // returns the list of all nodes in the order
 // that the given hash will choose to try to read from them
-func (c Cluster) ReadOrder(hash string) []Node {
+func (c cluster) ReadOrder(hash string) []node {
 	return hashOrder(hash, len(c.GetNeighbors())+1, c.Ring())
 }
 
-func hashOrder(hash string, size int, ring []RingEntry) []Node {
+func hashOrder(hash string, size int, ring []ringEntry) []node {
 	// our approach is to find the first bucket after our hash,
 	// partition the ring on that and put the first part on the
 	// end. Then go through and extract the ordering.
@@ -225,10 +225,10 @@ func hashOrder(hash string, size int, ring []RingEntry) []Node {
 		}
 	}
 	// yay, slices
-	reordered := make([]RingEntry, len(ring))
+	reordered := make([]ringEntry, len(ring))
 	reordered = append(ring[partitionIndex:], ring[:partitionIndex]...)
 
-	results := make([]Node, size)
+	results := make([]node, size)
 	var seen = map[string]bool{}
 	var i = 0
 	for _, r := range reordered {
@@ -241,7 +241,7 @@ func hashOrder(hash string, size int, ring []RingEntry) []Node {
 	return results
 }
 
-func (c *Cluster) updateNeighbor(neighbor Node) {
+func (c *cluster) updateNeighbor(neighbor node) {
 	if neighbor.UUID == c.Myself.UUID {
 		// as usual, skip ourself
 		return
@@ -256,13 +256,13 @@ func (c *Cluster) updateNeighbor(neighbor Node) {
 	}
 }
 
-func (c *Cluster) Retrieve(key Key) ([]byte, error) {
+func (c *cluster) Retrieve(key key) ([]byte, error) {
 	// we don't have the full-size, so check the cluster
-	nodes_to_check := c.ReadOrder(key.String())
+	nodesToCheck := c.ReadOrder(key.String())
 	// this is where we go down the list and ask the other
 	// nodes for the image
 	// TODO: parallelize this
-	for _, n := range nodes_to_check {
+	for _, n := range nodesToCheck {
 		if n.UUID == c.Myself.UUID {
 			// checking ourself would be silly
 			continue
@@ -280,28 +280,28 @@ func (c *Cluster) Retrieve(key Key) ([]byte, error) {
 	return nil, errors.New("not found in the cluster")
 }
 
-func (c *Cluster) AddFile(key Key, f multipart.File, replication int, min_replication int) bool {
+func (c *cluster) AddFile(key key, f multipart.File, replication int, minReplication int) bool {
 	nodes := c.WriteOrder(key.String())
-	var save_count = 0
+	var saveCount = 0
 	for _, n := range nodes {
 		if n.AddFile(key, f, c.secret) {
-			save_count++
+			saveCount++
 			n.LastSeen = time.Now()
 			c.UpdateNeighbor(n)
 		} else {
 			c.FailedNeighbor(n)
 		}
 		f.Seek(0, 0)
-		if save_count > replication {
+		if saveCount > replication {
 			break
 		}
 	}
-	return save_count >= min_replication
+	return saveCount >= minReplication
 }
 
-func (c *Cluster) JoinNeighbor(u string) (*Node, error) {
-	config_url := u + "/config/"
-	res, err := http.Get(config_url)
+func (c *cluster) JoinNeighbor(u string) (*node, error) {
+	configURL := u + "/config/"
+	res, err := http.Get(configURL)
 	if err != nil {
 		log.Println(err)
 		return nil, errors.New("error retrieving config")
@@ -311,12 +311,12 @@ func (c *Cluster) JoinNeighbor(u string) (*Node, error) {
 	if err != nil {
 		return nil, errors.New("error reading body of response")
 	}
-	var n Node
+
+	var n node
 	err = json.Unmarshal(body, &n)
 	if err != nil {
 		return nil, errors.New("error parsing json")
 	}
-
 	if n.UUID == c.Myself.UUID {
 		return nil, errors.New("I can't join myself, silly!")
 	}
@@ -333,7 +333,7 @@ func (c *Cluster) JoinNeighbor(u string) (*Node, error) {
 			// obviously, skip the one we just added
 			continue
 		}
-		res, err = http.PostForm(neighbor.BaseUrl+"/join/",
+		res, err = http.PostForm(neighbor.BaseURL+"/join/",
 			url.Values{"url": {u}, "secret": {c.secret}})
 		if err != nil {
 			log.Println(err)
@@ -342,8 +342,8 @@ func (c *Cluster) JoinNeighbor(u string) (*Node, error) {
 		}
 	}
 	// reciprocate
-	res, err = http.PostForm(n.BaseUrl+"/join/",
-		url.Values{"url": {c.Myself.BaseUrl}, "secret": {c.secret}})
+	res, err = http.PostForm(n.BaseURL+"/join/",
+		url.Values{"url": {c.Myself.BaseURL}, "secret": {c.secret}})
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +351,7 @@ func (c *Cluster) JoinNeighbor(u string) (*Node, error) {
 	return &n, nil
 }
 
-func (c *Cluster) BootstrapNeighbors(neighbors string) {
+func (c *cluster) BootstrapNeighbors(neighbors string) {
 	// wait a few seconds for other nodes to hopefully
 	// have started up
 	jitter := rand.Intn(5)
@@ -365,29 +365,29 @@ func (c *Cluster) BootstrapNeighbors(neighbors string) {
 
 type heartbeat struct {
 	UUID      string `json:"uuid"`
-	BaseUrl   string `json:"base_url"`
+	BaseURL   string `json:"base_url"`
 	Writeable bool   `json:"writeable"`
 	Secret    string `json:"secret"`
 
-	Neighbors []node_heartbeat `json:"neighbors"`
+	Neighbors []nodeHeartbeat `json:"neighbors"`
 }
 
-func (c *Cluster) Heartbeat() {
-	base_time := c.HeartbeatInterval
+func (c *cluster) Heartbeat() {
+	baseTime := c.HeartbeatInterval
 	for {
 		jitter := rand.Intn(5)
-		time.Sleep(time.Duration(base_time+jitter) * time.Second)
+		time.Sleep(time.Duration(baseTime+jitter) * time.Second)
 		log.Println(" * heartbeat " + c.Myself.UUID + " *")
 		neighbors := c.GetNeighbors()
-		neighbor_hbs := make([]node_heartbeat, len(neighbors))
+		neighborHBS := make([]nodeHeartbeat, len(neighbors))
 		for i, n := range neighbors {
-			neighbor_hbs[i] = n.NodeHeartbeat()
+			neighborHBS[i] = n.NodeHeartbeat()
 		}
 		var hb = heartbeat{
 			UUID:      c.Myself.UUID,
-			BaseUrl:   c.Myself.BaseUrl,
+			BaseURL:   c.Myself.BaseURL,
 			Writeable: c.Myself.Writeable,
-			Neighbors: neighbor_hbs,
+			Neighbors: neighborHBS,
 			Secret:    c.secret,
 		}
 		for _, n := range neighbors {
@@ -396,37 +396,37 @@ func (c *Cluster) Heartbeat() {
 	}
 }
 
-func (c *Cluster) Reaper() {
+func (c *cluster) Reaper() {
 	// sleep for a couple heartbeat cycles when we first start up
 	// to make sure everything has had time to settle
-	base_time := c.HeartbeatInterval
+	baseTime := c.HeartbeatInterval
 	jitter := rand.Intn(5)
-	time.Sleep(time.Duration((base_time*3)+jitter) * time.Second)
+	time.Sleep(time.Duration((baseTime*3)+jitter) * time.Second)
 	// now on with the reaping
 
-	var to_reap []Node
+	var toReap []node
 	// if we haven't heard from a node in over three heartbeats...
-	reap_period := time.Duration(base_time*3) * time.Second
+	reapPeriod := time.Duration(baseTime*3) * time.Second
 
 	for {
 		log.Println("Reaper wakes up...")
 		neighbors := c.GetNeighbors()
-		to_reap = make([]Node, 0)
+		toReap = make([]node, 0)
 		for _, n := range neighbors {
-			if time.Since(n.LastSeen) > reap_period {
+			if time.Since(n.LastSeen) > reapPeriod {
 				// it's dead, Jim!
-				to_reap = append(to_reap, n)
+				toReap = append(toReap, n)
 			}
 		}
-		for _, n := range to_reap {
+		for _, n := range toReap {
 			log.Printf("reaping %s\n", n.UUID)
 			c.RemoveNeighbor(n)
 		}
 		jitter := rand.Intn(5)
-		time.Sleep(time.Duration(base_time+jitter) * time.Second)
+		time.Sleep(time.Duration(baseTime+jitter) * time.Second)
 	}
 }
 
-func (c Cluster) CheckSecret(s string) bool {
+func (c cluster) CheckSecret(s string) bool {
 	return c.secret == s
 }

@@ -7,12 +7,12 @@ import (
 	"strings"
 )
 
-type Key struct {
+type key struct {
 	Algorithm string
 	Value     []byte
 }
 
-func KeyFromPath(path string) (*Key, error) {
+func keyFromPath(path string) (*key, error) {
 	dir := filepath.Dir(path)
 	parts := strings.Split(dir, "/")
 	// only want the last 20 parts
@@ -22,12 +22,12 @@ func KeyFromPath(path string) (*Key, error) {
 	algorithm := parts[len(parts)-21]
 	hash := strings.Join(parts[len(parts)-20:], "")
 	if len(hash) != 40 {
-		return nil, errors.New(fmt.Sprintf("invalid hash length: %d (%s)", len(hash), hash))
+		return nil, fmt.Errorf("invalid hash length: %d (%s)", len(hash), hash)
 	}
-	return KeyFromString(algorithm + ":" + hash)
+	return keyFromString(algorithm + ":" + hash)
 }
 
-func KeyFromString(str string) (*Key, error) {
+func keyFromString(str string) (*key, error) {
 	parts := strings.Split(str, ":")
 	algorithm := parts[0]
 	if algorithm != "sha1" {
@@ -37,10 +37,10 @@ func KeyFromString(str string) (*Key, error) {
 	if len(str) != 40 {
 		return nil, errors.New("invalid key")
 	}
-	return &Key{algorithm, []byte(str)}, nil
+	return &key{algorithm, []byte(str)}, nil
 }
 
-func (k Key) AsPath() string {
+func (k key) AsPath() string {
 	var parts []string
 	s := string(k.Value)
 	for i := range s {
@@ -51,10 +51,10 @@ func (k Key) AsPath() string {
 	return strings.Join(parts, "/")
 }
 
-func (k Key) String() string {
+func (k key) String() string {
 	return k.Algorithm + ":" + string(k.Value)
 }
 
-func (k Key) Valid() bool {
+func (k key) Valid() bool {
 	return k.Algorithm == "sha1" && len(k.String()) == 40
 }

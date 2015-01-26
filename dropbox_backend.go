@@ -12,16 +12,16 @@ import (
 	"github.com/stacktic/dropbox"
 )
 
-type DropBoxBackend struct {
+type dropboxBackend struct {
 	AccessKey string
 	SecretKey string
 	Token     string
 	db        *dropbox.Dropbox
 }
 
-func NewDropBoxBackend(access_key, secret_key, token string) *DropBoxBackend {
+func newDropboxBackend(accessKey, secretKey, token string) *dropboxBackend {
 	db := dropbox.NewDropbox()
-	db.SetAppInfo(access_key, secret_key)
+	db.SetAppInfo(accessKey, secretKey)
 
 	if token == "" {
 		fmt.Println("DropBox access needs to be authorized")
@@ -37,20 +37,20 @@ func NewDropBoxBackend(access_key, secret_key, token string) *DropBoxBackend {
 
 	db.SetAccessToken(token)
 
-	return &DropBoxBackend{access_key, secret_key, token, db}
+	return &dropboxBackend{accessKey, secretKey, token, db}
 }
 
-func (d DropBoxBackend) String() string {
+func (d dropboxBackend) String() string {
 	return "DropBox"
 }
 
-func (s *DropBoxBackend) Write(key Key, r io.ReadCloser) error {
+func (d *dropboxBackend) Write(key key, r io.ReadCloser) error {
 	path := key.Algorithm + "/" + key.AsPath()
 	// ignore error on this since it means that the path
 	// already exists
-	s.db.CreateFolder(path)
+	d.db.CreateFolder(path)
 
-	_, err := s.db.UploadByChunk(r, 1024*1024, path+"/data", true, "")
+	_, err := d.db.UploadByChunk(r, 1024*1024, path+"/data", true, "")
 	if err != nil {
 		log.Println("uh oh. couldn't write to dropbox")
 		log.Println(err)
@@ -59,9 +59,9 @@ func (s *DropBoxBackend) Write(key Key, r io.ReadCloser) error {
 	return nil
 }
 
-func (s DropBoxBackend) Read(key Key) ([]byte, error) {
+func (d dropboxBackend) Read(key key) ([]byte, error) {
 	path := key.Algorithm + "/" + key.AsPath()
-	r, _, err := s.db.Download(path+"/data", "", 0)
+	r, _, err := d.db.Download(path+"/data", "", 0)
 	if err != nil {
 		log.Println("error downloading from dropbox")
 		log.Println(err)
@@ -75,9 +75,9 @@ func (s DropBoxBackend) Read(key Key) ([]byte, error) {
 	return b, nil
 }
 
-func (s DropBoxBackend) Exists(key Key) bool {
+func (d dropboxBackend) Exists(key key) bool {
 	path := key.Algorithm + "/" + key.AsPath()
-	ent, err := s.db.Metadata(path+"/data", false, false, "", "", 1)
+	ent, err := d.db.Metadata(path+"/data", false, false, "", "", 1)
 
 	if err != nil || ent == nil {
 		return false
@@ -85,14 +85,14 @@ func (s DropBoxBackend) Exists(key Key) bool {
 	return true
 }
 
-func (s *DropBoxBackend) Delete(key Key) error {
-	_, err := s.db.Delete(key.Algorithm + "/" + key.AsPath() + "/data")
+func (d *dropboxBackend) Delete(key key) error {
+	_, err := d.db.Delete(key.Algorithm + "/" + key.AsPath() + "/data")
 	return err
 }
 
-func (s *DropBoxBackend) AAEEntry(e dropbox.Entry, site Site, interval int) {
+func (d *dropboxBackend) AAEEntry(e dropbox.Entry, site site, interval int) {
 	if e.IsDir {
-		ent, err := s.db.Metadata(e.Path, true, false, "", "", -1)
+		ent, err := d.db.Metadata(e.Path, true, false, "", "", -1)
 		if err != nil {
 			log.Println(err)
 			return
@@ -100,11 +100,11 @@ func (s *DropBoxBackend) AAEEntry(e dropbox.Entry, site Site, interval int) {
 		n := len(ent.Contents)
 		idxes := rand.Perm(n)
 		for _, i := range idxes {
-			s.AAEEntry(ent.Contents[i], site, interval)
+			d.AAEEntry(ent.Contents[i], site, interval)
 		}
 	} else {
 		log.Println(e.Path)
-		k, err := KeyFromPath(e.Path)
+		k, err := keyFromPath(e.Path)
 		if err != nil {
 			log.Println("couldn't make key from path")
 			return
@@ -118,14 +118,14 @@ func (s *DropBoxBackend) AAEEntry(e dropbox.Entry, site Site, interval int) {
 	}
 }
 
-func (s *DropBoxBackend) ActiveAntiEntropy(cluster *Cluster, site Site, interval int) {
+func (d *dropboxBackend) ActiveAntiEntropy(cluster *cluster, site site, interval int) {
 	log.Println("DropBox AAE starting")
 	// DropBox backend doesn't need verification, just rebalancing
 	rand.Seed(time.Now().UnixNano())
 	for {
 		log.Println("AAE starting at the top")
 
-		ent, err := s.db.Metadata("", true, false, "", "", -1)
+		ent, err := d.db.Metadata("", true, false, "", "", -1)
 		if err != nil {
 			log.Println(err)
 			return
@@ -133,23 +133,23 @@ func (s *DropBoxBackend) ActiveAntiEntropy(cluster *Cluster, site Site, interval
 		n := len(ent.Contents)
 		idxes := rand.Perm(n)
 		for _, i := range idxes {
-			s.AAEEntry(ent.Contents[i], site, interval)
+			d.AAEEntry(ent.Contents[i], site, interval)
 		}
 	}
 }
 
-type DropBoxVerifier struct{}
+type dropBoxVerifier struct{}
 
-func (v *DropBoxVerifier) Verify(path string, key Key, h string) error {
+func (v *dropBoxVerifier) Verify(path string, key key, h string) error {
 	// DropBox doesn't need verification
 	return nil
 }
 
-func (v *DropBoxVerifier) VerifyKey(key Key) error {
+func (v *dropBoxVerifier) VerifyKey(key key) error {
 	// DropBox doesn't need verification
 	return nil
 }
 
-func (b DropBoxBackend) NewVerifier(c *Cluster) Verifier {
-	return &DropBoxVerifier{}
+func (d dropboxBackend) NewVerifier(c *cluster) verifier {
+	return &dropBoxVerifier{}
 }

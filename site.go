@@ -1,56 +1,56 @@
 package main
 
-type Site struct {
-	Node           *Node
-	Cluster        *Cluster
-	Backend        Backend
+type site struct {
+	Node           *node
+	Cluster        *cluster
+	Backend        backend
 	Replication    int
 	MaxReplication int
 	ClusterSecret  string
 	AAEInterval    int
-	verifier       Verifier
-	rebalancer     *Rebalancer
+	verifier       verifier
+	rebalancer     *rebalancer
 }
 
-func NewSite(n *Node, c *Cluster, b Backend, replication, max_replication int, cluster_secret string, aae_interval int) *Site {
+func newSite(n *node, c *cluster, b backend, replication, maxReplication int, clusterSecret string, aaeInterval int) *site {
 	// couple sanity checks
 	if replication < 1 {
 		replication = 1
 	}
-	if max_replication < replication {
-		max_replication = replication
+	if maxReplication < replication {
+		maxReplication = replication
 	}
-	if aae_interval < 1 {
+	if aaeInterval < 1 {
 		// unset. default to 5 seconds
-		aae_interval = 5
+		aaeInterval = 5
 	}
-	s := &Site{
+	s := &site{
 		Node:           n,
 		Cluster:        c,
 		Backend:        b,
 		Replication:    replication,
-		MaxReplication: max_replication,
-		ClusterSecret:  cluster_secret,
-		AAEInterval:    aae_interval,
+		MaxReplication: maxReplication,
+		ClusterSecret:  clusterSecret,
+		AAEInterval:    aaeInterval,
 	}
 	s.verifier = b.NewVerifier(c)
-	s.rebalancer = NewRebalancer(c, *s)
+	s.rebalancer = newRebalancer(c, *s)
 	return s
 }
 
-func (s Site) ActiveAntiEntropy() {
+func (s site) ActiveAntiEntropy() {
 	// it's the backend's responsibility
 	s.Backend.ActiveAntiEntropy(s.Cluster, s, s.AAEInterval)
 }
 
-func (s Site) Rebalance(key Key) error {
+func (s site) Rebalance(key key) error {
 	return s.rebalancer.Rebalance(key)
 }
 
-func (s Site) Verify(path string, key Key, h string) error {
+func (s site) Verify(path string, key key, h string) error {
 	return s.verifier.Verify(path, key, h)
 }
 
-func (s Site) VerifyKey(key Key) error {
+func (s site) VerifyKey(key key) error {
 	return s.verifier.VerifyKey(key)
 }

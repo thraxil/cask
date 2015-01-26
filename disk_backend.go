@@ -13,19 +13,19 @@ import (
 	"time"
 )
 
-type DiskBackend struct {
+type diskBackend struct {
 	Root string
 }
 
-func NewDiskBackend(root string) *DiskBackend {
-	return &DiskBackend{Root: root}
+func newDiskBackend(root string) *diskBackend {
+	return &diskBackend{Root: root}
 }
 
-func (d DiskBackend) String() string {
+func (d diskBackend) String() string {
 	return "Disk"
 }
 
-func (d *DiskBackend) Write(key Key, r io.ReadCloser) error {
+func (d *diskBackend) Write(key key, r io.ReadCloser) error {
 	path := d.Root + key.Algorithm + "/" + key.AsPath()
 	log.Println(fmt.Sprintf("writing to %s\n", path))
 	err := os.MkdirAll(path, 0755)
@@ -51,12 +51,12 @@ func (d *DiskBackend) Write(key Key, r io.ReadCloser) error {
 	return nil
 }
 
-func (d DiskBackend) Read(key Key) ([]byte, error) {
+func (d diskBackend) Read(key key) ([]byte, error) {
 	path := d.Root + key.Algorithm + "/" + key.AsPath() + "/data"
 	return ioutil.ReadFile(path)
 }
 
-func (d DiskBackend) Exists(key Key) bool {
+func (d diskBackend) Exists(key key) bool {
 	path := d.Root + key.Algorithm + "/" + key.AsPath() + "/data"
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return false
@@ -64,14 +64,14 @@ func (d DiskBackend) Exists(key Key) bool {
 	return true
 }
 
-func (d DiskBackend) Delete(key Key) error {
+func (d diskBackend) Delete(key key) error {
 	path := d.Root + key.Algorithm + "/" + key.AsPath()
 	return os.RemoveAll(path)
 }
 
 // the only File methods that we care about
 // makes it easier to mock
-type FileIsh interface {
+type fileish interface {
 	IsDir() bool
 	Name() string
 }
@@ -83,7 +83,7 @@ func basename(path string) string {
 	return filename[:len(filename)-len(ext)]
 }
 
-func visitPreChecks(path string, f FileIsh, err error, c *Cluster) (bool, error) {
+func visitPreChecks(path string, f fileish, err error, c *cluster) (bool, error) {
 	if err != nil {
 		log.Printf("visit was handed an error: %s", err.Error())
 		return true, err
@@ -102,15 +102,15 @@ func visitPreChecks(path string, f FileIsh, err error, c *Cluster) (bool, error)
 	return false, nil
 }
 
-type DiskVerifier struct {
-	b   DiskBackend
-	c   *Cluster
+type diskVerifier struct {
+	b   diskBackend
+	c   *cluster
 	chF chan func()
 }
 
-func (b DiskBackend) NewVerifier(c *Cluster) Verifier {
-	v := &DiskVerifier{
-		b:   b,
+func (d diskBackend) NewVerifier(c *cluster) verifier {
+	v := &diskVerifier{
+		b:   d,
 		c:   c,
 		chF: make(chan func()),
 	}
@@ -118,13 +118,13 @@ func (b DiskBackend) NewVerifier(c *Cluster) Verifier {
 	return v
 }
 
-func (v *DiskVerifier) run() {
+func (v *diskVerifier) run() {
 	for f := range v.chF {
 		f()
 	}
 }
 
-func (v *DiskVerifier) Verify(path string, key Key, h string) error {
+func (v *diskVerifier) Verify(path string, key key, h string) error {
 	r := make(chan error)
 	go func() {
 		v.chF <- func() {
@@ -137,7 +137,7 @@ func (v *DiskVerifier) Verify(path string, key Key, h string) error {
 // does the same thing as Verify(), but given only the key
 // so it is expected to get the path, compute the hash of the
 // file and then do the verify.
-func (v *DiskVerifier) VerifyKey(key Key) error {
+func (v *diskVerifier) VerifyKey(key key) error {
 	r := make(chan error)
 	go func() {
 		v.chF <- func() {
@@ -161,12 +161,12 @@ func (v *DiskVerifier) VerifyKey(key Key) error {
 	return <-r
 }
 
-func (v *DiskVerifier) doVerify(path string, key Key, h string) error {
+func (v *diskVerifier) doVerify(path string, key key, h string) error {
 	if key.String() == "sha1:"+h {
 		return nil
 	}
 	log.Printf("corrupted file %s\n", path)
-	repaired, err := v.repair_file(path, key)
+	repaired, err := v.repairFile(path, key)
 	if err != nil {
 		log.Printf("error trying to repair file")
 		return err
@@ -178,9 +178,9 @@ func (v *DiskVerifier) doVerify(path string, key Key, h string) error {
 	return errors.New("unrepairable file")
 }
 
-func (v *DiskVerifier) repair_file(path string, key Key) (bool, error) {
-	nodes_to_check := v.c.ReadOrder(key.String())
-	for _, n := range nodes_to_check {
+func (v *diskVerifier) repairFile(path string, key key) (bool, error) {
+	nodesToCheck := v.c.ReadOrder(key.String())
+	for _, n := range nodesToCheck {
 		if n.UUID == v.c.Myself.UUID {
 			continue
 		}
@@ -199,7 +199,7 @@ func (v *DiskVerifier) repair_file(path string, key Key) (bool, error) {
 	return false, errors.New("no good copies found")
 }
 
-func (v *DiskVerifier) replaceFile(path string, file []byte) error {
+func (v *diskVerifier) replaceFile(path string, file []byte) error {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
 		log.Println("couldn't open for writing")
@@ -215,9 +215,9 @@ func (v *DiskVerifier) replaceFile(path string, file []byte) error {
 	return nil
 }
 
-func visit(path string, f os.FileInfo, err error, c *Cluster, s Site) error {
-	if AAE_SKIP < AAE_OFFSET {
-		AAE_SKIP++
+func visit(path string, f os.FileInfo, err error, c *cluster, s site) error {
+	if aaeSkip < aaeOffset {
+		aaeSkip++
 		return nil
 	}
 
@@ -235,7 +235,7 @@ func visit(path string, f os.FileInfo, err error, c *Cluster, s Site) error {
 
 	log.Printf("AAE visiting %s\n", path)
 
-	key, err := KeyFromPath(path)
+	key, err := keyFromPath(path)
 	if err != nil {
 		log.Println("couldn't get key from path")
 		return nil
@@ -264,24 +264,24 @@ func visit(path string, f os.FileInfo, err error, c *Cluster, s Site) error {
 	}
 
 	// slow things down a little to keep server load down
-	var base_time = 10
+	var baseTime = 10
 	jitter := rand.Intn(5)
-	time.Sleep(time.Duration(base_time+jitter) * time.Second)
+	time.Sleep(time.Duration(baseTime+jitter) * time.Second)
 	return nil
 }
 
-func makeVisitor(fn func(string, os.FileInfo, error, *Cluster, Site) error,
-	c *Cluster, s Site) func(path string, f os.FileInfo, err error) error {
+func makeVisitor(fn func(string, os.FileInfo, error, *cluster, site) error,
+	c *cluster, s site) func(path string, f os.FileInfo, err error) error {
 	return func(path string, f os.FileInfo, err error) error {
 		return fn(path, f, err, c, s)
 	}
 }
 
-var AAE_OFFSET = 0
-var AAE_SKIP = 0
+var aaeOffset = 0
+var aaeSkip = 0
 
-func (d DiskBackend) ActiveAntiEntropy(cluster *Cluster, site Site, interval int) {
-	AAE_OFFSET = rand.Intn(10000)
+func (d diskBackend) ActiveAntiEntropy(cluster *cluster, site site, interval int) {
+	aaeOffset = rand.Intn(10000)
 	var jitter = 1
 	for {
 		_, err := ioutil.ReadDir(d.Root)
@@ -289,7 +289,7 @@ func (d DiskBackend) ActiveAntiEntropy(cluster *Cluster, site Site, interval int
 			fmt.Printf("Can't get a directory listing for %s. Let's fail fast.\n", d.Root)
 			os.Exit(1)
 		}
-		if AAE_SKIP >= AAE_OFFSET {
+		if aaeSkip >= aaeOffset {
 			jitter = rand.Intn(5)
 			time.Sleep(time.Duration(interval+jitter) * time.Second)
 			log.Println("AAE starting at the top")

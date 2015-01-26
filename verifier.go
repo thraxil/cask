@@ -1,6 +1,6 @@
 package main
 
-type Verifier interface {
-	Verify(string, Key, string) error
-	VerifyKey(Key) error
+type verifier interface {
+	Verify(string, key, string) error
+	VerifyKey(key) error
 }

@@ -14,36 +14,36 @@ import (
 	"time"
 )
 
-type Node struct {
+type node struct {
 	UUID       string    `json:"uuid"`
-	BaseUrl    string    `json:"base_url"`
+	BaseURL    string    `json:"base_url"`
 	Writeable  bool      `json:"writeable"`
 	LastSeen   time.Time `json:"last_seen"`
 	LastFailed time.Time `json:"last_failed"`
 }
 
-func NewNode(uuid, base_url string, writeable bool) *Node {
-	return &Node{
+func newNode(uuid, baseURL string, writeable bool) *node {
+	return &node{
 		UUID:      uuid,
-		BaseUrl:   base_url,
+		BaseURL:   baseURL,
 		Writeable: writeable,
 	}
 }
 
-func (n Node) LastSeenFormatted() string {
+func (n node) LastSeenFormatted() string {
 	return n.LastSeen.Format("2006-01-02 15:04:05")
 }
 
-func (n Node) LastFailedFormatted() string {
+func (n node) LastFailedFormatted() string {
 	return n.LastFailed.Format("2006-01-02 15:04:05")
 }
 
-func (n Node) AddFileUrl() string {
-	return n.BaseUrl + "/local/"
+func (n node) AddFileURL() string {
+	return n.BaseURL + "/local/"
 }
 
-func (n *Node) AddFile(key Key, f io.Reader, secret string) bool {
-	resp, err := postFile(f, n.AddFileUrl(), secret)
+func (n *node) AddFile(key key, f io.Reader, secret string) bool {
+	resp, err := postFile(f, n.AddFileURL(), secret)
 	if err != nil {
 		log.Println("postFile returned false")
 		return false
@@ -59,35 +59,35 @@ func (n *Node) AddFile(key Key, f io.Reader, secret string) bool {
 	return string(b) == key.String()
 }
 
-func (n Node) Unhealthy() bool {
+func (n node) Unhealthy() bool {
 	return n.LastFailed.After(n.LastSeen)
 }
 
-func postFile(f io.Reader, target_url, secret string) (*http.Response, error) {
-	body_buf := bytes.NewBufferString("")
-	body_writer := multipart.NewWriter(body_buf)
-	file_writer, err := body_writer.CreateFormFile("file", "file.dat")
+func postFile(f io.Reader, targetURL, secret string) (*http.Response, error) {
+	bodyBuf := bytes.NewBufferString("")
+	bodyWriter := multipart.NewWriter(bodyBuf)
+	fileWriter, err := bodyWriter.CreateFormFile("file", "file.dat")
 	if err != nil {
 		panic(err.Error())
 	}
-	io.Copy(file_writer, f)
+	io.Copy(fileWriter, f)
 	// .Close() finishes setting it up
 	// do not defer this or it will make and empty POST request
-	body_writer.Close()
-	content_type := body_writer.FormDataContentType()
+	bodyWriter.Close()
+	contentType := bodyWriter.FormDataContentType()
 	c := http.Client{}
-	req, err := http.NewRequest("POST", target_url, body_buf)
+	req, err := http.NewRequest("POST", targetURL, bodyBuf)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", content_type)
+	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("X-Cask-Cluster-Secret", secret)
 
 	return c.Do(req)
 }
 
-func (n Node) HashKeys() []string {
-	keys := make([]string, REPLICAS)
+func (n node) HashKeys() []string {
+	keys := make([]string, replicas)
 	h := sha1.New()
 	for i := range keys {
 		h.Reset()
@@ -97,13 +97,13 @@ func (n Node) HashKeys() []string {
 	return keys
 }
 
-func (n Node) retrieveUrl(key Key) string {
-	return n.BaseUrl + "/local/" + key.String() + "/"
+func (n node) retrieveURL(key key) string {
+	return n.BaseURL + "/local/" + key.String() + "/"
 }
 
-func (n *Node) Retrieve(key Key, secret string) ([]byte, error) {
+func (n *node) Retrieve(key key, secret string) ([]byte, error) {
 	c := http.Client{}
-	req, err := http.NewRequest("GET", n.retrieveUrl(key), nil)
+	req, err := http.NewRequest("GET", n.retrieveURL(key), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -120,8 +120,8 @@ func (n *Node) Retrieve(key Key, secret string) ([]byte, error) {
 	return b, nil
 }
 
-func (n Node) retrieveInfoUrl(key Key) string {
-	return n.BaseUrl + "/local/" + key.String() + "/"
+func (n node) retrieveInfoURL(key key) string {
+	return n.BaseURL + "/local/" + key.String() + "/"
 }
 
 type pingResponse struct {
@@ -152,8 +152,8 @@ func timedHeadRequest(url string, duration time.Duration, secret string) (resp *
 	return
 }
 
-func (n *Node) RetrieveInfo(key Key, secret string) (bool, error) {
-	url := n.retrieveInfoUrl(key)
+func (n *node) RetrieveInfo(key key, secret string) (bool, error) {
+	url := n.retrieveInfoURL(key)
 	resp, err := timedHeadRequest(url, 1*time.Second, secret)
 	if err != nil {
 		// TODO: n.LastFailed = time.Now()
@@ -165,7 +165,7 @@ func (n *Node) RetrieveInfo(key Key, secret string) (bool, error) {
 	return n.processRetrieveInfoResponse(resp)
 }
 
-func (n *Node) processRetrieveInfoResponse(resp *http.Response) (bool, error) {
+func (n *node) processRetrieveInfoResponse(resp *http.Response) (bool, error) {
 	if resp == nil {
 		return false, errors.New("nil response")
 	}
@@ -177,27 +177,27 @@ func (n *Node) processRetrieveInfoResponse(resp *http.Response) (bool, error) {
 	return true, nil
 }
 
-type node_heartbeat struct {
+type nodeHeartbeat struct {
 	UUID      string `json:"uuid"`
-	BaseUrl   string `json:"base_url"`
+	BaseURL   string `json:"base_url"`
 	Writeable bool   `json:"writeable"`
 }
 
-func (n Node) NodeHeartbeat() node_heartbeat {
-	return node_heartbeat{UUID: n.UUID, BaseUrl: n.BaseUrl, Writeable: n.Writeable}
+func (n node) NodeHeartbeat() nodeHeartbeat {
+	return nodeHeartbeat{UUID: n.UUID, BaseURL: n.BaseURL, Writeable: n.Writeable}
 }
 
-func (n Node) HeartbeatUrl() string {
-	return n.BaseUrl + "/heartbeat/"
+func (n node) heartbeatURL() string {
+	return n.BaseURL + "/heartbeat/"
 }
 
-func (n Node) SendHeartbeat(hb heartbeat) {
+func (n node) SendHeartbeat(hb heartbeat) {
 	j, err := json.Marshal(hb)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	req, err := http.NewRequest("POST", n.HeartbeatUrl(), bytes.NewBuffer(j))
+	req, err := http.NewRequest("POST", n.heartbeatURL(), bytes.NewBuffer(j))
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -213,20 +213,20 @@ func (n Node) SendHeartbeat(hb heartbeat) {
 
 // get file with specified key from the node
 // return (found, file content, error)
-func (n Node) CheckFile(key Key, secret string) (bool, []byte, error) {
+func (n node) CheckFile(key key, secret string) (bool, []byte, error) {
 	f, err := n.Retrieve(key, secret)
 	if err != nil {
 		// node doesn't have it
 		return false, nil, nil
 	}
-	if !doublecheck_replica(f, key) {
+	if !doublecheckReplica(f, key) {
 		// that node had a bad copy as well
 		return true, nil, errors.New("corrupt")
 	}
 	return true, f, nil
 }
 
-func doublecheck_replica(f []byte, key Key) bool {
+func doublecheckReplica(f []byte, key key) bool {
 	hn := sha1.New()
 	io.WriteString(hn, string(f))
 	nhash := fmt.Sprintf("%x", hn.Sum(nil))
