@@ -3,7 +3,7 @@ package main
 import "testing"
 
 func Test_KeyFromPath(t *testing.T) {
-	k, err := KeyFromPath("sha1/ae/28/60/5f/0f/fc/34/fe/53/14/34/2f/78/ef/aa/13/ee/45/f6/99/data")
+	k, err := keyFromPath("sha1/ae/28/60/5f/0f/fc/34/fe/53/14/34/2f/78/ef/aa/13/ee/45/f6/99/data")
 	if err != nil {
 		t.Error("bad key")
 	}
@@ -11,7 +11,7 @@ func Test_KeyFromPath(t *testing.T) {
 		t.Error("didn't get the right key")
 	}
 
-	k, err = KeyFromPath("/tmp/cask0/sha1/ae/28/60/5f/0f/fc/34/fe/53/14/34/2f/78/ef/aa/13/ee/45/f6/99/data")
+	k, err = keyFromPath("/tmp/cask0/sha1/ae/28/60/5f/0f/fc/34/fe/53/14/34/2f/78/ef/aa/13/ee/45/f6/99/data")
 	if err != nil {
 		t.Error("error on full key")
 	}
