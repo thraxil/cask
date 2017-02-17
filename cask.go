@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -42,6 +43,8 @@ type config struct {
 	MaxProcs          int    `envconfig:"MAX_PROCS"`
 	SSLCert           string `envconfig:"SSL_CERT"`
 	SSLKey            string `envconfig:"SSL_Key"`
+	ReadTimeout       int    `envconfig:"READ_TIMEOUT"`
+	WriteTimeout      int    `envconfig:"WRITE_TIMEOUT"`
 }
 
 func main() {
@@ -98,9 +101,22 @@ func main() {
 
 	http.HandleFunc("/favicon.ico", faviconHandler)
 
+	// some defaults
+	if c.ReadTimeout == 0 {
+		c.ReadTimeout = 5
+	}
+	if c.WriteTimeout == 0 {
+		c.WriteTimeout = 20
+	}
+
+	server := &http.Server{
+		Addr:         fmt.Sprintf(":%d", c.Port),
+		ReadTimeout:  time.Duration(c.ReadTimeout) * time.Second,
+		WriteTimeout: time.Duration(c.WriteTimeout) * time.Second,
+	}
 	if c.SSLCert != "" && c.SSLKey != "" && strings.HasPrefix(c.BaseURL, "https:") {
-		log.Fatal(http.ListenAndServeTLS(fmt.Sprintf(":%d", c.Port), c.SSLCert, c.SSLKey, nil))
+		log.Fatal(server.ListenAndServeTLS(c.SSLCert, c.SSLKey))
 	} else {
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", c.Port), nil))
+		log.Fatal(server.ListenAndServe())
 	}
 }
