@@ -157,6 +157,18 @@ Maximum number of CPUs that can be executing simultaneously. Defaults
 to the number of CPU cores on your system. Set it lower if you want to
 reduce concurrency for some reason.
 
+CASK_READ_TIMEOUT
+-----------------
+
+Max read timeout for HTTP(S) server. Defaults to 5 (seconds).
+
+CASK_WRITE_TIMEOUT
+------------------
+
+Max write timeout for HTTP(S) server. Defaults to 20 (seconds). If you
+serve really large files out of your cluster, you may need to increase
+this.
+
 CASK_SSL_CERTIFICATE and CASK_SSL_KEY
 -------------------------------------
 
