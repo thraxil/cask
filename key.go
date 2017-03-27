@@ -56,5 +56,6 @@ func (k key) String() string {
 }
 
 func (k key) Valid() bool {
-	return k.Algorithm == "sha1" && len(k.String()) == 40
+	// at the moment only sha1 is supported
+	return k.Algorithm == "sha1" && len(k.Value) == 40
 }

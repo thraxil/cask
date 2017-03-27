@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func Test_KeyFromPath(t *testing.T) {
 	k, err := keyFromPath("sha1/ae/28/60/5f/0f/fc/34/fe/53/14/34/2f/78/ef/aa/13/ee/45/f6/99/data")
@@ -18,5 +21,49 @@ func Test_KeyFromPath(t *testing.T) {
 	if k != nil && k.String() != "sha1:ae28605f0ffc34fe5314342f78efaa13ee45f699" {
 		t.Error("failed on full path")
 	}
+}
 
+func Test_KeyFromPathExceptions(t *testing.T) {
+	// too few parts
+	_, err := keyFromPath("sha1/ae/28/60/5f/0f/fc/34/fe/53/")
+	if err == nil {
+		t.Error("not enough parts for a valid key")
+	}
+	// too many parts
+	_, err = keyFromPath("sha1/ae/28/60/5f/0f/fc/34/fe/53/28/60/5f/0f/fc/34/fe/53/14/34/2f/78/ef/aa/13/ee/45/f6/99/data")
+	if err == nil {
+		t.Error("too many parts for a valid key")
+	}
+}
+
+func Test_AsPath(t *testing.T) {
+	p := "ae/28/60/5f/0f/fc/34/fe/53/14/34/2f/78/ef/aa/13/ee/45/f6/99"
+	k, _ := keyFromPath("sha1/" + p + "/data")
+	if p != k.AsPath() {
+		t.Error("path came back changed")
+	}
+}
+
+func Test_Valid(t *testing.T) {
+	p := "ae/28/60/5f/0f/fc/34/fe/53/14/34/2f/78/ef/aa/13/ee/45/f6/99"
+	k, _ := keyFromPath("sha1/" + p + "/data")
+
+	if !k.Valid() {
+		fmt.Println(k.Algorithm, k.String())
+		t.Error("should be valid")
+	}
+}
+
+func Test_keyFromString(t *testing.T) {
+	// invalid algorithm
+	_, err := keyFromString("foo:not valid")
+	if err == nil {
+		t.Error("'foo' is not a valid algorithm")
+	}
+
+	// valid algorithm, invalid hash length
+	_, err = keyFromString("sha1:not enough chars")
+	if err == nil {
+		t.Error("sha1 hash must be 40 chars")
+	}
 }
