@@ -1,0 +1,37 @@
+hash: 73e4084c04cee2d7987262dee36777eb2138124c8c298dc47b40f63cf792a425
+updated: 2017-03-27T21:57:31.625779651+01:00
+imports:
+- name: github.com/golang/protobuf
+  version: c9c7427a2a70d2eb3bafa0ab2dc163e45f143317
+  subpackages:
+  - proto
+- name: github.com/kelseyhightower/envconfig
+  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
+- name: github.com/mitchellh/goamz
+  version: caaaea8b30ee15616494ee68abd5d8ebbbef05cf
+  subpackages:
+  - aws
+  - s3
+- name: github.com/stacktic/dropbox
+  version: 58f839b21094d5e0af7caf613599830589233d20
+- name: github.com/vaughan0/go-ini
+  version: a98ad7ee00ec53921f08832bc06ecf7fd600e6a1
+- name: golang.org/x/net
+  version: 6c23252515492caf9b228a9d5cabcdbde29f7f82
+  subpackages:
+  - context
+- name: golang.org/x/oauth2
+  version: 7fdf09982454086d5570c7db3e11f360194830ca
+  subpackages:
+  - internal
+- name: google.golang.org/appengine
+  version: 56d253d1dd14aa01937e12c73a0971bcfd797ff2
+  subpackages:
+  - internal
+  - internal/base
+  - internal/datastore
+  - internal/log
+  - internal/remote_api
+  - internal/urlfetch
+  - urlfetch
+testImports: []

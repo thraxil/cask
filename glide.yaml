@@ -1,0 +1,9 @@
+package: github.com/thraxil/cask
+import:
+- package: github.com/kelseyhightower/envconfig
+  version: ^1.3.0
+- package: github.com/mitchellh/goamz
+  subpackages:
+  - aws
+  - s3
+- package: github.com/stacktic/dropbox

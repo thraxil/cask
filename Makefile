@@ -1,4 +1,4 @@
-cask: *.go
+cask: *.go glide.*
 	go build .
 
 test: cask
