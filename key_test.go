@@ -34,6 +34,12 @@ func Test_KeyFromPathExceptions(t *testing.T) {
 	if err == nil {
 		t.Error("too many parts for a valid key")
 	}
+
+	// right number of parts, but not enough chars
+	_, err = keyFromPath("sha1/a/28/60/5f/0f/fc/34/fe/53/14/34/2f/78/ef/aa/13/ee/45/f6/99/data")
+	if err == nil {
+		t.Error("must be 40 chars in hash")
+	}
 }
 
 func Test_AsPath(t *testing.T) {
