@@ -168,6 +168,7 @@ type clusterInfoPage struct {
 	Myself    *node
 	Neighbors []node
 	Site      *site
+	FreeSpace uint64
 }
 
 func clusterInfoHandler(w http.ResponseWriter, r *http.Request, s *site) {
@@ -302,6 +303,7 @@ const clusterTemplate = `
 <h1>Node: {{.Myself.UUID}}</h1>
 <table class="table">
 <tr><th>Backend</th><td>{{.Site.Backend}}</td></tr>
+<tr><th>Free Space</th><td>{{.Site.Backend.FreeSpace}}</td></tr>
 <tr><th>Base</th><td>{{.Myself.BaseURL}}</td></tr>
 <tr><th>Writeable</th><td>{{.Myself.Writeable}}</td></tr>
 <tr><th>Replication</th><td>{{.Site.Replication}}</td></tr>
