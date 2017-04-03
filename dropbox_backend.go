@@ -153,3 +153,10 @@ func (v *dropBoxVerifier) VerifyKey(key key) error {
 func (d dropboxBackend) NewVerifier(c *cluster) verifier {
 	return &dropBoxVerifier{}
 }
+
+func (d dropboxBackend) FreeSpace() uint64 {
+	account, _ := d.db.GetAccountInfo()
+	// TODO: this is just returning the quota for now
+	// not the amount remaining
+	return uint64(account.QuotaInfo.Quota)
+}

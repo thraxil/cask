@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"syscall"
 	"time"
 )
 
@@ -299,4 +300,10 @@ func (d diskBackend) ActiveAntiEntropy(cluster *cluster, site site, interval int
 			log.Printf("filepath.Walk() returned %v\n", err)
 		}
 	}
+}
+
+func (d diskBackend) FreeSpace() uint64 {
+	var stat syscall.Statfs_t
+	syscall.Statfs(d.Root, &stat)
+	return stat.Bavail * uint64(stat.Bsize)
 }

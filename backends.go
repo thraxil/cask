@@ -13,4 +13,5 @@ type backend interface {
 	Delete(key) error
 	ActiveAntiEntropy(*cluster, site, int)
 	NewVerifier(*cluster) verifier
+	FreeSpace() uint64
 }

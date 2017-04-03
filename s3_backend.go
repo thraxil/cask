@@ -117,3 +117,8 @@ func (v *s3Verifier) VerifyKey(key key) error {
 func (s s3Backend) NewVerifier(c *cluster) verifier {
 	return &s3Verifier{}
 }
+
+func (s s3Backend) FreeSpace() uint64 {
+	// TODO: this is just dummied out for now
+	return 1000000000
+}
