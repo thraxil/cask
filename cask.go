@@ -24,6 +24,7 @@ type config struct {
 	UUID            string
 	Backend         string
 	DiskBackendRoot string `envconfig:"DISK_BACKEND_ROOT"`
+	KeepFree        uint64 `envconfig:"KEEP_FREE"`
 
 	S3AccessKey string `envconfig:"S3_ACCESS_KEY"`
 	S3SecretKey string `envconfig:"S3_SECRET_KEY"`
@@ -77,7 +78,11 @@ func main() {
 	} else {
 		runtime.GOMAXPROCS(runtime.NumCPU())
 	}
-	cluster := newCluster(*n, c.ClusterSecret, c.HeartbeatInterval)
+	if c.KeepFree == 0 {
+		// default to keeping 10GB free
+		c.KeepFree = 10 * 1024 * 1024 * 1024
+	}
+	cluster := newCluster(n, c.ClusterSecret, c.HeartbeatInterval)
 	s := newSite(n, cluster, backend, c.Replication, c.MaxReplication, c.ClusterSecret, c.AAEInterval)
 	if c.Neighbors != "" {
 		go cluster.BootstrapNeighbors(c.Neighbors)
@@ -85,6 +90,7 @@ func main() {
 	go cluster.Heartbeat()
 	go s.ActiveAntiEntropy()
 	go cluster.Reaper()
+	go n.WatchFreeSpace(c.KeepFree, backend)
 
 	log.Println("=== Cask Node starting ================")
 	log.Println("Root: " + c.DiskBackendRoot)

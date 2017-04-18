@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"mime/multipart"
 	"net/http"
 	"time"
@@ -183,7 +184,7 @@ type nodeHeartbeat struct {
 	Writeable bool   `json:"writeable"`
 }
 
-func (n node) NodeHeartbeat() nodeHeartbeat {
+func (n *node) NodeHeartbeat() nodeHeartbeat {
 	return nodeHeartbeat{UUID: n.UUID, BaseURL: n.BaseURL, Writeable: n.Writeable}
 }
 
@@ -191,7 +192,7 @@ func (n node) heartbeatURL() string {
 	return n.BaseURL + "/heartbeat/"
 }
 
-func (n node) SendHeartbeat(hb heartbeat) {
+func (n *node) SendHeartbeat(hb heartbeat) {
 	j, err := json.Marshal(hb)
 	if err != nil {
 		log.Println(err)
@@ -231,4 +232,21 @@ func doublecheckReplica(f []byte, key key) bool {
 	io.WriteString(hn, string(f))
 	nhash := fmt.Sprintf("%x", hn.Sum(nil))
 	return "sha1:"+nhash == key.String()
+}
+
+func (n *node) WatchFreeSpace(minFreeSpace uint64, backend backend) {
+	for {
+		if n.Writeable {
+			if backend.FreeSpace() < minFreeSpace {
+				n.Writeable = false
+			}
+		} else {
+			if backend.FreeSpace() > minFreeSpace {
+				n.Writeable = true
+			}
+		}
+		baseTime := 300
+		jitter := rand.Intn(5)
+		time.Sleep(time.Duration((baseTime*3)+jitter) * time.Second)
+	}
 }

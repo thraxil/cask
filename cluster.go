@@ -17,14 +17,14 @@ import (
 const replicas = 16
 
 type cluster struct {
-	Myself            node
+	Myself            *node
 	secret            string
 	neighbors         map[string]node
 	chF               chan func()
 	HeartbeatInterval int
 }
 
-func newCluster(myself node, secret string, heartbeatInterval int) *cluster {
+func newCluster(myself *node, secret string, heartbeatInterval int) *cluster {
 	rand.Seed(time.Now().UnixNano())
 	if heartbeatInterval < 1 {
 		// unset. default to 1 minute
@@ -131,7 +131,7 @@ func (c cluster) NeighborsInclusive() []node {
 	go func() {
 		c.chF <- func() {
 			a := make([]node, 1)
-			a[0] = c.Myself
+			a[0] = *c.Myself
 
 			neighbs := make([]node, len(c.neighbors))
 			var i = 0
