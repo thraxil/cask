@@ -110,10 +110,11 @@ func (n *node) Retrieve(key key, secret string) ([]byte, error) {
 	}
 	req.Header.Set("X-Cask-Cluster-Secret", secret)
 	resp, err := c.Do(req)
-	defer resp.Body.Close()
+
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp.Status != "200 OK" {
 		return nil, errors.New("404, probably")
 	}
