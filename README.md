@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/thraxil/cask.svg?branch=master)](https://travis-ci.org/thraxil/cask)
 [![Coverage Status](https://coveralls.io/repos/github/thraxil/cask/badge.svg?branch=master)](https://coveralls.io/github/thraxil/cask?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/thraxil/cask)](https://goreportcard.com/report/github.com/thraxil/cask)
 
 Cask is a simple content-addressed storage cluster with
 a REST interface. Suitable as a building block for building
