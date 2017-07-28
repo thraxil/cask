@@ -56,22 +56,9 @@ func main() {
 	}
 	log.SetPrefix(c.UUID[:8] + " ")
 	n := newNode(c.UUID, c.BaseURL, c.Writeable)
-	var backend backend
-	if c.Backend == "disk" {
-		backend = newDiskBackend(c.DiskBackendRoot)
-	} else if c.Backend == "s3" {
-		if c.S3AccessKey == "" || c.S3SecretKey == "" || c.S3Bucket == "" {
-			log.Fatal("need S3 ACCESS_KEY, SECRET_KEY, and bucket all configured")
-		} else {
-			backend = newS3Backend(c.S3AccessKey, c.S3SecretKey, c.S3Bucket)
-		}
-	} else if c.Backend == "dropbox" {
-		if c.DBAccessKey == "" || c.DBSecretKey == "" {
-			log.Fatal("need dropbox ACCESS_KEY and SECRET_KEY")
-		} else {
-			backend = newDropboxBackend(c.DBAccessKey, c.DBSecretKey, c.DBToken)
-		}
-	}
+
+	backend := setupBackend(c)
+
 	if c.MaxProcs > 0 {
 		log.Printf("max procs: %d\n", c.MaxProcs)
 		runtime.GOMAXPROCS(c.MaxProcs)
@@ -125,4 +112,24 @@ func main() {
 	} else {
 		log.Fatal(server.ListenAndServe())
 	}
+}
+
+func setupBackend(c config) backend {
+	var backend backend
+	if c.Backend == "disk" {
+		backend = newDiskBackend(c.DiskBackendRoot)
+	} else if c.Backend == "s3" {
+		if c.S3AccessKey == "" || c.S3SecretKey == "" || c.S3Bucket == "" {
+			log.Fatal("need S3 ACCESS_KEY, SECRET_KEY, and bucket all configured")
+		} else {
+			backend = newS3Backend(c.S3AccessKey, c.S3SecretKey, c.S3Bucket)
+		}
+	} else if c.Backend == "dropbox" {
+		if c.DBAccessKey == "" || c.DBSecretKey == "" {
+			log.Fatal("need dropbox ACCESS_KEY and SECRET_KEY")
+		} else {
+			backend = newDropboxBackend(c.DBAccessKey, c.DBSecretKey, c.DBToken)
+		}
+	}
+	return backend
 }
