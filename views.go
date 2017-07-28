@@ -24,32 +24,7 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	parts := strings.Split(r.URL.String(), "/")
 	if len(parts) == 3 {
 		if r.Method == "POST" {
-			log.Println("write a file")
-			if !s.Node.Writeable {
-				http.Error(w, "this node is read-only", 503)
-				return
-			}
-			f, _, _ := r.FormFile("file")
-			defer f.Close()
-			h := sha1.New()
-			io.Copy(h, f)
-			key, err := keyFromString("sha1:" + fmt.Sprintf("%x", h.Sum(nil)))
-			if err != nil {
-				http.Error(w, "bad hash", 500)
-				return
-			}
-			if s.Backend.Exists(*key) {
-				log.Println("already exists, don't need to do anything")
-				fmt.Fprintf(w, key.String())
-				return
-			}
-			f.Seek(0, 0)
-			err = s.Backend.Write(*key, f)
-			if err != nil {
-				http.Error(w, "could not write file", 500)
-				return
-			}
-			fmt.Fprintf(w, key.String())
+			handleLocalPost(w, r, s)
 			return
 		}
 		fmt.Fprintf(w, "show form/handle post\n")
@@ -94,6 +69,36 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *site) {
 			}()
 		}
 	}
+}
+
+func handleLocalPost(w http.ResponseWriter, r *http.Request, s *site) {
+	log.Println("write a file")
+	if !s.Node.Writeable {
+		http.Error(w, "this node is read-only", 503)
+		return
+	}
+	f, _, _ := r.FormFile("file")
+	defer f.Close()
+	h := sha1.New()
+	io.Copy(h, f)
+	key, err := keyFromString("sha1:" + fmt.Sprintf("%x", h.Sum(nil)))
+	if err != nil {
+		http.Error(w, "bad hash", 500)
+		return
+	}
+	if s.Backend.Exists(*key) {
+		log.Println("already exists, don't need to do anything")
+		fmt.Fprintf(w, key.String())
+		return
+	}
+	f.Seek(0, 0)
+	err = s.Backend.Write(*key, f)
+	if err != nil {
+		http.Error(w, "could not write file", 500)
+		return
+	}
+	fmt.Fprintf(w, key.String())
+	return
 }
 
 func serveDirect(w http.ResponseWriter, key key, s *site) bool {
