@@ -30,3 +30,6 @@
 
 [[constraint]]
   name = "github.com/stacktic/dropbox"
+
+[[constraint]]
+  name = "github.com/hashicorp/memberlist"

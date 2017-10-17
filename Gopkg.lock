@@ -2,9 +2,57 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "github.com/armon/go-metrics"
+  packages = ["."]
+  revision = "9a4b6e10bed6220a1665955aa2b75afc91eb10b3"
+
+[[projects]]
   name = "github.com/golang/protobuf"
   packages = ["proto"]
   revision = "c9c7427a2a70d2eb3bafa0ab2dc163e45f143317"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/errwrap"
+  packages = ["."]
+  revision = "7554cd9344cec97297fa6649b055a8c98c2a1e55"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/go-immutable-radix"
+  packages = ["."]
+  revision = "8aac2701530899b64bdea735a1de8da899815220"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/go-msgpack"
+  packages = ["codec"]
+  revision = "fa3f63826f7c23912c15263591e65d54d080b458"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/go-multierror"
+  packages = ["."]
+  revision = "83588e72410abfbe4df460eeb6f30841ae47d4c4"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/go-sockaddr"
+  packages = ["."]
+  revision = "41949a141473f6340abc6ba0fcd0f89da6f6f837"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/golang-lru"
+  packages = ["simplelru"]
+  revision = "0a025b7e63adc15a622f29b0b2c4c3848243bbf6"
+
+[[projects]]
+  name = "github.com/hashicorp/memberlist"
+  packages = ["."]
+  revision = "ce8abaa0c60c2d6bee7219f5ddf500e0a1457b28"
+  version = "v0.1.0"
 
 [[projects]]
   name = "github.com/kelseyhightower/envconfig"
@@ -14,9 +62,21 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/miekg/dns"
+  packages = [".","internal/socket"]
+  revision = "54ceb83127d7dadaf2701e59bbc9e1919b95b630"
+
+[[projects]]
+  branch = "master"
   name = "github.com/mitchellh/goamz"
   packages = ["aws","s3"]
   revision = "caaaea8b30ee15616494ee68abd5d8ebbbef05cf"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/sean-/seed"
+  packages = ["."]
+  revision = "e2103e2c35297fb7e17febb81e49b312087a2372"
 
 [[projects]]
   branch = "master"
@@ -48,6 +108,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "cd16643a101c42fab9a516f19666a10f6c6967b59c33486e8805c31ea8b5f1b6"
+  inputs-digest = "a5bc7fd3223edbf82b49898b71d1fb3eba9fce7348909456955650f5cdf9ff52"
   solver-name = "gps-cdcl"
   solver-version = 1

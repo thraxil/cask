@@ -12,6 +12,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/memberlist"
 )
 
 const replicas = 16
@@ -40,6 +42,19 @@ func newCluster(myself *node, secret string, heartbeatInterval int) *cluster {
 	go c.backend()
 
 	return c
+}
+
+// implement memberlist.EventDelegate interface
+func (c *cluster) NotifyJoin(node *memberlist.Node) {
+	return
+}
+
+func (c *cluster) NotifyLeave(node *memberlist.Node) {
+	return
+}
+
+func (c *cluster) NotifyUpdate(node *memberlist.Node) {
+	return
 }
 
 // serialize all reads/writes through here
