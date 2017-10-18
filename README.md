@@ -64,6 +64,12 @@ CASK_PORT
 
 Port to listen on.
 
+CASK_GOSSIP_PORT
+----------------
+
+Port for gossip protocol (can work with only TCP access, but allowing
+UDP access to this port will also speed things up).
+
 CASK_BASE_URL
 -------------
 
@@ -106,9 +112,9 @@ read and write permissions to it.
 CASK_NEIGHBORS
 --------------
 
-A comma seperated list of base URLs for other nodes. If this exists,
-the cask node will try, upon startup, to join those other nodes. This
-is handy for bootstrapping the cluster.
+A comma seperated list of other nodes. If this exists, the cask node
+will try, upon startup, to join those other nodes. This is handy for
+bootstrapping the cluster.
 
 CASK_REPLICATION
 ----------------
