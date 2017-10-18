@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"strings"
 	"text/template"
-	"time"
 )
 
 // read/write file requests that shall only touch
@@ -237,50 +236,16 @@ func joinHandler(w http.ResponseWriter, r *http.Request, s *site) {
 			http.Error(w, "need to know the secret knock", 403)
 			return
 		}
-		n, err := s.Cluster.JoinNeighbor(u)
+		parts := strings.Split(u, ",")
+		_, err := mlist.Join(parts)
 		if err != nil {
 			fmt.Fprint(w, err)
 			return
 		}
-		fmt.Fprintf(w, fmt.Sprintf("Added node [%s]", n.UUID))
+		fmt.Fprintf(w, "Added node")
 	} else {
 		// show form
 		w.Write([]byte(joinTemplate))
-	}
-}
-
-func heartbeatHandler(w http.ResponseWriter, r *http.Request, s *site) {
-	if r.Method == "POST" {
-		decoder := json.NewDecoder(r.Body)
-		var hb heartbeat
-		err := decoder.Decode(&hb)
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
-		}
-		if !s.Cluster.CheckSecret(hb.Secret) {
-			log.Println("got an unauthorized heartbeat")
-			http.Error(w, "sorry, need the secret knock", 403)
-			return
-		}
-		n := node{
-			UUID: hb.UUID, BaseURL: hb.BaseURL, Writeable: hb.Writeable,
-			LastSeen: time.Now()}
-		s.Cluster.UpdateNeighbor(n)
-		for _, neighbor := range hb.Neighbors {
-			if neighbor.UUID == s.Node.UUID {
-				// skip ourselves as usual
-				continue
-			}
-			_, found := s.Cluster.FindNeighborByUUID(neighbor.UUID)
-			if !found {
-				log.Println("learned about a new neighbor via heartbeat")
-				log.Println(neighbor.UUID, neighbor.BaseURL)
-				s.Cluster.JoinNeighbor(neighbor.BaseURL)
-			}
-		}
-	} else {
-		http.Error(w, "method not allowed", 405)
 	}
 }
 
@@ -349,14 +314,18 @@ const clusterTemplate = `
 `
 
 const joinTemplate = `
-<html><head><title>Add Node</title></head>
+<html><head><title>Add Node</title>
+<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css" />
+</head>
 <body>
+<div class="container">
 <h1>Add Node</h1>
-<form action="." method="post">
-<input type="text" name="url" placeholder="Base URL" size="128" /><br />
-<input type="text" name="secret" placeholder="cluster secret" /><br />
+<form action="." method="post" class="form">
+<input type="text" name="url" placeholder="Gossip Address" size="128" class="form-control"/><br />
+<input type="text" name="secret" placeholder="cluster secret" class="form-control"/><br />
 <input type="submit" value="add node" />
 </form>
+</div>
 </body>
 </html>
 `

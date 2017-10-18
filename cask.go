@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"runtime"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/memberlist"
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -17,6 +19,11 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, *site), s *site) ht
 		fn(w, r, s)
 	}
 }
+
+var (
+	broadcasts *memberlist.TransmitLimitedQueue
+	mlist      *memberlist.Memberlist
+)
 
 type config struct {
 	Writeable       bool
@@ -35,6 +42,7 @@ type config struct {
 	DBToken     string `envconfig:"DROPBOX_TOKEN"`
 
 	Port              int
+	GossipPort        int `envconfig:"GOSSIP_PORT"`
 	Neighbors         string
 	Replication       int
 	MaxReplication    int    `envconfig:"MAX_REPLICATION"`
@@ -70,13 +78,12 @@ func main() {
 		c.KeepFree = 10 * 1024 * 1024 * 1024
 	}
 	cluster := newCluster(n, c.ClusterSecret, c.HeartbeatInterval)
-	s := newSite(n, cluster, backend, c.Replication, c.MaxReplication, c.ClusterSecret, c.AAEInterval)
-	if c.Neighbors != "" {
-		go cluster.BootstrapNeighbors(c.Neighbors)
+	err = startMemberList(cluster, c)
+	if err != nil {
+		log.Fatal("couldn't start gossip", err)
 	}
-	go cluster.Heartbeat()
+	s := newSite(n, cluster, backend, c.Replication, c.MaxReplication, c.ClusterSecret, c.AAEInterval)
 	go s.ActiveAntiEntropy()
-	go cluster.Reaper()
 	go n.WatchFreeSpace(c.KeepFree, backend)
 
 	log.Println("=== Cask Node starting ================")
@@ -90,7 +97,6 @@ func main() {
 	http.HandleFunc("/file/", makeHandler(fileHandler, s))
 	http.HandleFunc("/join/", makeHandler(joinHandler, s))
 	http.HandleFunc("/config/", makeHandler(configHandler, s))
-	http.HandleFunc("/heartbeat/", makeHandler(heartbeatHandler, s))
 
 	http.HandleFunc("/favicon.ico", faviconHandler)
 
@@ -132,4 +138,32 @@ func setupBackend(c config) backend {
 		}
 	}
 	return backend
+}
+
+func startMemberList(cluster *cluster, conf config) error {
+	hostname, _ := os.Hostname()
+	c := memberlist.DefaultLocalConfig()
+	c.BindPort = conf.GossipPort
+	c.Name = hostname + "-" + fmt.Sprintf("%d", conf.GossipPort)
+	c.Delegate = cluster
+	c.Events = cluster
+	mlist, err := memberlist.Create(c)
+	if err != nil {
+		return err
+	}
+	if len(conf.Neighbors) > 0 {
+		parts := strings.Split(conf.Neighbors, ",")
+		_, err := mlist.Join(parts)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	broadcasts = &memberlist.TransmitLimitedQueue{
+		NumNodes: func() int {
+			return mlist.NumMembers()
+		},
+		RetransmitMult: 3,
+	}
+
+	return nil
 }

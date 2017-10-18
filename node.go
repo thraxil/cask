@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"crypto/sha1"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -183,34 +182,6 @@ type nodeHeartbeat struct {
 	UUID      string `json:"uuid"`
 	BaseURL   string `json:"base_url"`
 	Writeable bool   `json:"writeable"`
-}
-
-func (n *node) NodeHeartbeat() nodeHeartbeat {
-	return nodeHeartbeat{UUID: n.UUID, BaseURL: n.BaseURL, Writeable: n.Writeable}
-}
-
-func (n node) heartbeatURL() string {
-	return n.BaseURL + "/heartbeat/"
-}
-
-func (n *node) SendHeartbeat(hb heartbeat) {
-	j, err := json.Marshal(hb)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	req, err := http.NewRequest("POST", n.heartbeatURL(), bytes.NewBuffer(j))
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		// can't send a heartbeat to that node
-		// TODO: mark it as failed
-		// for now, just keep going...
-		return
-	}
-	defer resp.Body.Close()
-	ioutil.ReadAll(resp.Body)
 }
 
 // get file with specified key from the node

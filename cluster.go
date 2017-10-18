@@ -3,14 +3,10 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"mime/multipart"
-	"net/http"
-	"net/url"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/memberlist"
@@ -32,6 +28,7 @@ func newCluster(myself *node, secret string, heartbeatInterval int) *cluster {
 		// unset. default to 1 minute
 		heartbeatInterval = 60
 	}
+
 	c := &cluster{
 		Myself:            myself,
 		secret:            secret,
@@ -44,17 +41,77 @@ func newCluster(myself *node, secret string, heartbeatInterval int) *cluster {
 	return c
 }
 
+func (c *cluster) jsonSerialize() []byte {
+	var hb = heartbeat{
+		UUID:      c.Myself.UUID,
+		BaseURL:   c.Myself.BaseURL,
+		Writeable: c.Myself.Writeable,
+		Secret:    c.secret,
+	}
+	b, _ := json.Marshal(hb)
+	return b
+}
+
+// implement memberlist.Delegate interface
+func (c *cluster) GetBroadcasts(overhead, limit int) [][]byte {
+	return broadcasts.GetBroadcasts(overhead, limit)
+}
+
+func (c *cluster) NodeMeta(limit int) []byte {
+	return c.jsonSerialize()
+}
+
+func (c *cluster) NotifyMsg([]byte) {
+	return
+}
+
+func (c *cluster) LocalState(join bool) []byte {
+	return c.jsonSerialize()
+}
+
+func (c *cluster) MergeRemoteState(buf []byte, join bool) {
+	return
+}
+
 // implement memberlist.EventDelegate interface
-func (c *cluster) NotifyJoin(node *memberlist.Node) {
+func (c *cluster) NotifyJoin(joinNode *memberlist.Node) {
+	var hb heartbeat
+	if err := json.Unmarshal(joinNode.Meta, &hb); err != nil {
+		return
+	}
+	n := node{
+		UUID: hb.UUID, BaseURL: hb.BaseURL, Writeable: hb.Writeable,
+		LastSeen: time.Now()}
+	if c.CheckSecret(hb.Secret) {
+		c.AddNeighbor(n)
+	}
 	return
 }
 
-func (c *cluster) NotifyLeave(node *memberlist.Node) {
-	return
+func (c *cluster) NotifyLeave(leaveNode *memberlist.Node) {
+	var hb heartbeat
+	if err := json.Unmarshal(leaveNode.Meta, &hb); err != nil {
+		return
+	}
+	n := node{
+		UUID: hb.UUID, BaseURL: hb.BaseURL, Writeable: hb.Writeable,
+		LastSeen: time.Now()}
+	if c.CheckSecret(hb.Secret) {
+		c.RemoveNeighbor(n)
+	}
 }
 
-func (c *cluster) NotifyUpdate(node *memberlist.Node) {
-	return
+func (c *cluster) NotifyUpdate(updateNode *memberlist.Node) {
+	var hb heartbeat
+	if err := json.Unmarshal(updateNode.Meta, &hb); err != nil {
+		return
+	}
+	n := node{
+		UUID: hb.UUID, BaseURL: hb.BaseURL, Writeable: hb.Writeable,
+		LastSeen: time.Now()}
+	if c.CheckSecret(hb.Secret) {
+		c.UpdateNeighbor(n)
+	}
 }
 
 // serialize all reads/writes through here
@@ -256,21 +313,6 @@ func hashOrder(hash string, size int, ring []ringEntry) []node {
 	return results
 }
 
-func (c *cluster) updateNeighbor(neighbor node) {
-	if neighbor.UUID == c.Myself.UUID {
-		// as usual, skip ourself
-		return
-	}
-	// TODO: convert these to a single atomic
-	// UpdateOrAddNeighbor type operation
-	if _, ok := c.FindNeighborByUUID(neighbor.UUID); ok {
-		c.UpdateNeighbor(neighbor)
-	} else {
-		// heard about another node second hand
-		c.AddNeighbor(neighbor)
-	}
-}
-
 func (c *cluster) Retrieve(key key) ([]byte, error) {
 	// we don't have the full-size, so check the cluster
 	nodesToCheck := c.ReadOrder(key.String())
@@ -314,70 +356,6 @@ func (c *cluster) AddFile(key key, f multipart.File, replication int, minReplica
 	return saveCount >= minReplication
 }
 
-func (c *cluster) JoinNeighbor(u string) (*node, error) {
-	configURL := u + "/config/"
-	res, err := http.Get(configURL)
-	if err != nil {
-		log.Println(err)
-		return nil, errors.New("error retrieving config")
-	}
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, errors.New("error reading body of response")
-	}
-
-	var n node
-	err = json.Unmarshal(body, &n)
-	if err != nil {
-		return nil, errors.New("error parsing json")
-	}
-	if n.UUID == c.Myself.UUID {
-		return nil, errors.New("I can't join myself, silly!")
-	}
-	_, ok := c.FindNeighborByUUID(n.UUID)
-	if ok {
-		// let's not do updates through this. Let gossip handle that.
-		return nil, errors.New("already have a node with that UUID in the cluster")
-	}
-	n.LastSeen = time.Now()
-	c.AddNeighbor(n)
-	// join the node to all our neighbors too
-	for _, neighbor := range c.GetNeighbors() {
-		if neighbor.UUID == n.UUID {
-			// obviously, skip the one we just added
-			continue
-		}
-		res, err = http.PostForm(neighbor.BaseURL+"/join/",
-			url.Values{"url": {u}, "secret": {c.secret}})
-		if err != nil {
-			log.Println(err)
-		} else {
-			res.Body.Close()
-		}
-	}
-	// reciprocate
-	res, err = http.PostForm(n.BaseURL+"/join/",
-		url.Values{"url": {c.Myself.BaseURL}, "secret": {c.secret}})
-	if err != nil {
-		return nil, err
-	}
-	res.Body.Close()
-	return &n, nil
-}
-
-func (c *cluster) BootstrapNeighbors(neighbors string) {
-	// wait a few seconds for other nodes to hopefully
-	// have started up
-	jitter := rand.Intn(5)
-	time.Sleep(time.Duration(jitter) * time.Second)
-
-	for _, n := range strings.Split(neighbors, ",") {
-		// ignore any results/errors
-		c.JoinNeighbor(n)
-	}
-}
-
 type heartbeat struct {
 	UUID      string `json:"uuid"`
 	BaseURL   string `json:"base_url"`
@@ -385,61 +363,6 @@ type heartbeat struct {
 	Secret    string `json:"secret"`
 
 	Neighbors []nodeHeartbeat `json:"neighbors"`
-}
-
-func (c *cluster) Heartbeat() {
-	baseTime := c.HeartbeatInterval
-	for {
-		jitter := rand.Intn(5)
-		time.Sleep(time.Duration(baseTime+jitter) * time.Second)
-		log.Println(" * heartbeat " + c.Myself.UUID + " *")
-		neighbors := c.GetNeighbors()
-		neighborHBS := make([]nodeHeartbeat, len(neighbors))
-		for i, n := range neighbors {
-			neighborHBS[i] = n.NodeHeartbeat()
-		}
-		var hb = heartbeat{
-			UUID:      c.Myself.UUID,
-			BaseURL:   c.Myself.BaseURL,
-			Writeable: c.Myself.Writeable,
-			Neighbors: neighborHBS,
-			Secret:    c.secret,
-		}
-		for _, n := range neighbors {
-			n.SendHeartbeat(hb)
-		}
-	}
-}
-
-func (c *cluster) Reaper() {
-	// sleep for a couple heartbeat cycles when we first start up
-	// to make sure everything has had time to settle
-	baseTime := c.HeartbeatInterval
-	jitter := rand.Intn(5)
-	time.Sleep(time.Duration((baseTime*3)+jitter) * time.Second)
-	// now on with the reaping
-
-	var toReap []node
-	// if we haven't heard from a node in over three heartbeats...
-	reapPeriod := time.Duration(baseTime*3) * time.Second
-
-	for {
-		log.Println("Reaper wakes up...")
-		neighbors := c.GetNeighbors()
-		toReap = make([]node, 0)
-		for _, n := range neighbors {
-			if time.Since(n.LastSeen) > reapPeriod {
-				// it's dead, Jim!
-				toReap = append(toReap, n)
-			}
-		}
-		for _, n := range toReap {
-			log.Printf("reaping %s\n", n.UUID)
-			c.RemoveNeighbor(n)
-		}
-		jitter := rand.Intn(5)
-		time.Sleep(time.Duration(baseTime+jitter) * time.Second)
-	}
 }
 
 func (c cluster) CheckSecret(s string) bool {
