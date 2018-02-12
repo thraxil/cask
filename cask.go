@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/memberlist"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func makeHandler(fn func(http.ResponseWriter, *http.Request, *site), s *site) http.HandlerFunc {
@@ -99,6 +100,7 @@ func main() {
 	http.HandleFunc("/config/", makeHandler(configHandler, s))
 
 	http.HandleFunc("/favicon.ico", faviconHandler)
+	http.Handle("/metrics", promhttp.Handler())
 
 	// some defaults
 	if c.ReadTimeout == 0 {
