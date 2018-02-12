@@ -157,7 +157,7 @@ func startMemberList(cluster *cluster, conf config) error {
 		parts := strings.Split(conf.Neighbors, ",")
 		_, err := mlist.Join(parts)
 		if err != nil {
-			log.Fatal(err)
+			log.Error(err)
 		}
 	}
 	broadcasts = &memberlist.TransmitLimitedQueue{
