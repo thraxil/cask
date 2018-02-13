@@ -70,6 +70,16 @@ func (c *cluster) LocalState(join bool) []byte {
 }
 
 func (c *cluster) MergeRemoteState(buf []byte, join bool) {
+	var hb heartbeat
+	if err := json.Unmarshal(buf, &hb); err != nil {
+		return
+	}
+	n := node{
+		UUID: hb.UUID, BaseURL: hb.BaseURL, Writeable: hb.Writeable,
+		LastSeen: time.Now()}
+	if c.CheckSecret(hb.Secret) {
+		c.UpdateNeighbor(n)
+	}
 	return
 }
 
@@ -341,16 +351,18 @@ func (c *cluster) AddFile(key key, f multipart.File, replication int, minReplica
 	nodes := c.WriteOrder(key.String())
 	var saveCount = 0
 	for _, n := range nodes {
-		if n.AddFile(key, f, c.secret) {
-			saveCount++
-			n.LastSeen = time.Now()
-			c.UpdateNeighbor(n)
-		} else {
-			c.FailedNeighbor(n)
-		}
-		f.Seek(0, 0)
-		if saveCount > replication {
-			break
+		if !n.Writeable {
+			if n.AddFile(key, f, c.secret) {
+				saveCount++
+				n.LastSeen = time.Now()
+				c.UpdateNeighbor(n)
+			} else {
+				c.FailedNeighbor(n)
+			}
+			f.Seek(0, 0)
+			if saveCount > replication {
+				break
+			}
 		}
 	}
 	return saveCount >= minReplication
