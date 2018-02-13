@@ -82,12 +82,12 @@ func (r rebalancer) checkNodesForRebalance(key key, nodesToCheck []node) (bool, 
 }
 
 func (r rebalancer) retrieveReplica(key key, n node, satisfied bool) int {
-	if !n.Writeable {
-		return 0
-	}
 	local, err := n.RetrieveInfo(key, r.c.secret)
 	if err == nil && local {
 		return 1
+	}
+	if !n.Writeable {
+		return 0
 	}
 	if !satisfied {
 		b, err := r.s.Backend.Read(key)
