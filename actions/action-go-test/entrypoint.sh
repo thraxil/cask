@@ -3,4 +3,5 @@
 set -e
 
 export GOPATH=/tmp
-go test
+make install_deps
+make test
