@@ -36,7 +36,7 @@ Features:
   cluster.
 * Read-repair. When you download a file from a node, it verifies the
   local copy and makes sure it is correctly balanced on the cluster.
-* Pluggable Storage backends. Currently local disk, S3, and Dropbox
+* Pluggable Storage backends. Currently local disk and S3
   are implemented, with plans for Google Drive, etc.
 
 What Cask doesn't do:
@@ -191,17 +191,3 @@ CASK_S3_ACCESS_KEY, CASK_S3_SECRET_KEY, and CASK_S3_BUCKET
 
 To use S3 storage, you must set the `CASK_BACKEND` to 's3' and put in
 appropriate values for these.
-
-
-CASK_DROPBOX_ACCESS_KEY, CASK_DROPBOX_SECRET_KEY, and CASK_DROPBOX_TOKEN
-------------------------------------------------------------------------
-
-To use dropbox storage, you must set the `CASK_BACKEND` to "dropbox"
-and put in appropriate values for these. To configure, you will
-need to log in to dropbox and register an app at:
-https://www.dropbox.com/developers/apps/create
-
-That will give you at least the access key and secret key. If you
-start the cask node without the token set, it will send you to a
-page to complete the authorization and give you the token.
-

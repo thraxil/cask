@@ -39,10 +39,6 @@ type config struct {
 	S3SecretKey string `envconfig:"S3_SECRET_KEY"`
 	S3Bucket    string `envconfig:"S3_BUCKET"`
 
-	DBAccessKey string `envconfig:"DROPBOX_ACCESS_KEY"`
-	DBSecretKey string `envconfig:"DROPBOX_SECRET_KEY"`
-	DBToken     string `envconfig:"DROPBOX_TOKEN"`
-
 	Port              int
 	GossipPort        int `envconfig:"GOSSIP_PORT"`
 	Neighbors         string
@@ -132,12 +128,6 @@ func setupBackend(c config) backend {
 			log.Fatal("need S3 ACCESS_KEY, SECRET_KEY, and bucket all configured")
 		} else {
 			backend = newS3Backend(c.S3AccessKey, c.S3SecretKey, c.S3Bucket)
-		}
-	} else if c.Backend == "dropbox" {
-		if c.DBAccessKey == "" || c.DBSecretKey == "" {
-			log.Fatal("need dropbox ACCESS_KEY and SECRET_KEY")
-		} else {
-			backend = newDropboxBackend(c.DBAccessKey, c.DBSecretKey, c.DBToken)
 		}
 	}
 	return backend

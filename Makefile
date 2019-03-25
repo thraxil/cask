@@ -9,7 +9,6 @@ install_deps:
 	go get github.com/mitchellh/goamz/aws
 	go get github.com/mitchellh/goamz/s3
 	go get golang.org/x/oauth2
-	go get github.com/stacktic/dropbox
 	go get github.com/prometheus/client_golang/prometheus
 
 cluster: cask
