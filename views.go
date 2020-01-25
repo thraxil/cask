@@ -9,11 +9,17 @@ import (
 	"net/http"
 	"strings"
 	"text/template"
+
+	beeline "github.com/honeycombio/beeline-go"
 )
 
 // read/write file requests that shall only touch
 // the current node. No cluster interaction.
 func localHandler(w http.ResponseWriter, r *http.Request, s *site) {
+	beeline.AddField(r.Context(), "Route", "local")
+	beeline.AddField(r.Context(), "Node", s.Node.UUID)
+	beeline.AddField(r.Context(), "Writeable", s.Node.Writeable)
+
 	secret := r.Header.Get("X-Cask-Cluster-Secret")
 	if !s.Cluster.CheckSecret(secret) {
 		log.Println("unauthorized local file request")
@@ -31,6 +37,7 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	}
 	if len(parts) == 4 {
 		key := parts[2]
+		beeline.AddField(r.Context(), "key", key)
 		log.Printf("%s /local/%s/\n", r.Method, parts[2])
 		k, err := keyFromString(key)
 		if err != nil {
@@ -123,9 +130,13 @@ func serveDirect(w http.ResponseWriter, key key, s *site) bool {
 }
 
 func fileHandler(w http.ResponseWriter, r *http.Request, s *site) {
+	beeline.AddField(r.Context(), "Route", "file")
+	beeline.AddField(r.Context(), "Node", s.Node.UUID)
+	beeline.AddField(r.Context(), "Writeable", s.Node.Writeable)
 	parts := strings.Split(r.URL.String(), "/")
 	if len(parts) == 4 {
 		key := parts[2]
+		beeline.AddField(r.Context(), "key", key)
 		log.Printf("%s /file/%s/\n", r.Method, parts[2])
 		k, err := keyFromString(key)
 		if err != nil {
@@ -155,6 +166,9 @@ func fileHandler(w http.ResponseWriter, r *http.Request, s *site) {
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request, s *site) {
+	beeline.AddField(r.Context(), "Route", "index")
+	beeline.AddField(r.Context(), "Node", s.Node.UUID)
+	beeline.AddField(r.Context(), "Writeable", s.Node.Writeable)
 	if r.Method == "GET" {
 		clusterInfoHandler(w, r, s)
 		return
@@ -176,6 +190,9 @@ type clusterInfoPage struct {
 }
 
 func clusterInfoHandler(w http.ResponseWriter, r *http.Request, s *site) {
+	beeline.AddField(r.Context(), "Route", "clusterInfo")
+	beeline.AddField(r.Context(), "Node", s.Node.UUID)
+	beeline.AddField(r.Context(), "Writeable", s.Node.Writeable)
 	p := clusterInfoPage{
 		Title:     "cluster status",
 		Cluster:   s.Cluster,
@@ -223,6 +240,9 @@ func postFileHandler(w http.ResponseWriter, r *http.Request, s *site) {
 }
 
 func joinHandler(w http.ResponseWriter, r *http.Request, s *site) {
+	beeline.AddField(r.Context(), "Route", "join")
+	beeline.AddField(r.Context(), "Node", s.Node.UUID)
+	beeline.AddField(r.Context(), "Writeable", s.Node.Writeable)
 	if r.Method == "POST" {
 		if r.FormValue("url") == "" {
 			fmt.Fprint(w, "no url specified")
@@ -250,6 +270,9 @@ func joinHandler(w http.ResponseWriter, r *http.Request, s *site) {
 }
 
 func configHandler(w http.ResponseWriter, r *http.Request, s *site) {
+	beeline.AddField(r.Context(), "Route", "config")
+	beeline.AddField(r.Context(), "Node", s.Node.UUID)
+	beeline.AddField(r.Context(), "Writeable", s.Node.Writeable)
 	b, err := json.Marshal(s.Node)
 	if err != nil {
 		log.Println(err)
