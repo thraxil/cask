@@ -45,14 +45,18 @@ func (r rebalancer) doRebalance(key key) error {
 		log.Println("can't rebalance on a nil cluster")
 		return errors.New("nil cluster")
 	}
+	rebalances.Inc()
 	nodesToCheck := r.c.ReadOrder(key.String())
 	satisfied, deleteLocal, foundReplicas := r.checkNodesForRebalance(key, nodesToCheck)
 	if !satisfied {
+		rebalanceFailures.Inc()
 		log.Printf("could not replicate %s to %d nodes", key, r.s.Replication)
 	} else {
+		rebalanceNoops.Inc()
 		log.Printf("%s has full replica set (%d of %d)\n", key, foundReplicas, r.s.Replication)
 	}
 	if satisfied && deleteLocal {
+		rebalanceDeletes.Inc()
 		r.cleanUpExcessReplica(key)
 	}
 	return nil

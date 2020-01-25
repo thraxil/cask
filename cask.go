@@ -27,6 +27,34 @@ var (
 	mlist      *memberlist.Memberlist
 )
 
+var (
+	rebalances = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "cask_rebalance_total",
+			Help: "The total number of rebalance attempts",
+		})
+	rebalanceFailures = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "cask_rebalance_failure_total",
+		Help: "Keys that could not be rebalanced",
+	})
+	rebalanceNoops = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "cask_rebalance_noop_total",
+		Help: "Keys that do not need to be rebalanced",
+	})
+	rebalanceDeletes = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "cask_rebalance_delete_total",
+		Help: "Keys that were removed from the local node",
+	})
+)
+
+func init() {
+	// Metrics have to be registered to be exposed:
+	prometheus.MustRegister(rebalances)
+	prometheus.MustRegister(rebalanceFailures)
+	prometheus.MustRegister(rebalanceNoops)
+	prometheus.MustRegister(rebalanceDeletes)
+}
+
 type config struct {
 	Writeable       bool
 	BaseURL         string `envconfig:"BASE_URL"`
@@ -108,7 +136,7 @@ func main() {
 	}
 
 	server := &http.Server{
-		Addr:         fmt.Sprintf(":%d", c.Port),
+		Addr:         fmt.Sprintf("0.0.0.0:%d", c.Port),
 		ReadTimeout:  time.Duration(c.ReadTimeout) * time.Second,
 		WriteTimeout: time.Duration(c.WriteTimeout) * time.Second,
 	}
