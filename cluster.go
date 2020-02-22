@@ -94,6 +94,7 @@ func (c *cluster) NotifyJoin(joinNode *memberlist.Node) {
 		LastSeen: time.Now()}
 	if c.CheckSecret(hb.Secret) {
 		c.AddNeighbor(n)
+		clusterJoins.Inc()
 	}
 	return
 }
@@ -108,6 +109,7 @@ func (c *cluster) NotifyLeave(leaveNode *memberlist.Node) {
 		LastSeen: time.Now()}
 	if c.CheckSecret(hb.Secret) {
 		c.RemoveNeighbor(n)
+		clusterLeaves.Inc()
 	}
 }
 
@@ -134,12 +136,14 @@ func (c *cluster) backend() {
 func (c *cluster) AddNeighbor(n node) {
 	c.chF <- func() {
 		c.neighbors[n.UUID] = n
+		clusterTotal.Set(float64(len(c.neighbors)))
 	}
 }
 
 func (c *cluster) RemoveNeighbor(n node) {
 	c.chF <- func() {
 		delete(c.neighbors, n.UUID)
+		clusterTotal.Set(float64(len(c.neighbors)))
 	}
 }
 

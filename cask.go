@@ -28,6 +28,7 @@ var (
 )
 
 var (
+	// rebalance related
 	rebalances = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "cask_rebalance_total",
@@ -45,6 +46,19 @@ var (
 		Name: "cask_rebalance_delete_total",
 		Help: "Keys that were removed from the local node",
 	})
+	// cluster related
+	clusterJoins = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "cask_cluster_joins_total",
+		Help: "cluster join operations",
+	})
+	clusterLeaves = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "cask_cluster_leaves_total",
+		Help: "cluster leave operations",
+	})
+	clusterTotal = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "cask_cluster_total",
+		Help: "total size of cluster",
+	})
 )
 
 func init() {
@@ -53,6 +67,10 @@ func init() {
 	prometheus.MustRegister(rebalanceFailures)
 	prometheus.MustRegister(rebalanceNoops)
 	prometheus.MustRegister(rebalanceDeletes)
+
+	prometheus.MustRegister(clusterJoins)
+	prometheus.MustRegister(clusterLeaves)
+	prometheus.MustRegister(clusterTotal)
 }
 
 type config struct {
