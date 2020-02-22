@@ -11,18 +11,15 @@ import (
 	"time"
 
 	"github.com/hashicorp/memberlist"
-	beeline "github.com/honeycombio/beeline-go"
-	"github.com/honeycombio/beeline-go/wrappers/hnynethttp"
-	libhoney "github.com/honeycombio/libhoney-go"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func makeHandler(fn func(http.ResponseWriter, *http.Request, *site), s *site) http.HandlerFunc {
-	return hnynethttp.WrapHandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		fn(w, r, s)
-	})
+	}
 }
 
 var (
@@ -83,9 +80,6 @@ type config struct {
 	SSLKey            string `envconfig:"SSL_Key"`
 	ReadTimeout       int    `envconfig:"READ_TIMEOUT"`
 	WriteTimeout      int    `envconfig:"WRITE_TIMEOUT"`
-
-	HoneyWriteKey string `envconfig:"HONEYKEY"`
-	HoneyDataSet  string `envconfig:"HONEYDATASET"`
 }
 
 func main() {
@@ -124,20 +118,11 @@ func main() {
 	log.Println("Base URL: " + c.BaseURL)
 	log.Println("=======================================")
 
-	if c.HoneyWriteKey != "" && c.HoneyDataSet != "" {
-		beeline.Init(beeline.Config{
-			WriteKey:    c.HoneyWriteKey,
-			Dataset:     c.HoneyDataSet,
-			ServiceName: "cask",
-		})
-		addCommonLibhoneyFields()
-	}
-
 	http.HandleFunc("/", prometheus.InstrumentHandler("root", makeHandler(indexHandler, s)))
 	http.HandleFunc("/local/", prometheus.InstrumentHandler("local", makeHandler(localHandler, s)))
 	http.HandleFunc("/file/", prometheus.InstrumentHandler("file", makeHandler(fileHandler, s)))
 	http.HandleFunc("/join/", prometheus.InstrumentHandler("join", makeHandler(joinHandler, s)))
-	http.HandleFunc("/config/", prometheus.InstrumentHandler("config", makeHandler(configHandler, s)))
+	http.HandleFunc("/config/", prometheus.InstrumentHandler("file", makeHandler(configHandler, s)))
 
 	http.HandleFunc("/favicon.ico", faviconHandler)
 	http.Handle("/metrics", promhttp.Handler())
@@ -202,22 +187,4 @@ func startMemberList(cluster *cluster, conf config) error {
 	}
 
 	return nil
-}
-
-// addCommonLibhoneyFields adds a few fields we want in all events
-func addCommonLibhoneyFields() {
-	// TODO what other fields should we add here for extra color?
-	libhoney.AddDynamicField("meta.num_goroutines",
-		func() interface{} { return runtime.NumGoroutine() })
-	getAlloc := func() interface{} {
-		var mem runtime.MemStats
-		runtime.ReadMemStats(&mem)
-		return mem.Alloc
-	}
-	libhoney.AddDynamicField("meta.memory_inuse", getAlloc)
-
-	startTime := time.Now()
-	libhoney.AddDynamicField("meta.process_uptime_sec", func() interface{} {
-		return time.Now().Sub(startTime) / time.Second
-	})
 }

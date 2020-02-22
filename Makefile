@@ -1,20 +1,17 @@
-GOBIN ?= go
-
 cask: *.go
-	$(GOBIN) build .
+	go build .
 
 test: cask
-	$(GOBIN) test .
+	go test .
 
 install_deps:
-	$(GOBIN) get github.com/kelseyhightower/envconfig
-	$(GOBIN) get github.com/mitchellh/goamz/aws
-	$(GOBIN) get github.com/mitchellh/goamz/s3
-	$(GOBIN) get golang.org/x/oauth2
-	$(GOBIN) get github.com/prometheus/client_golang/prometheus
-	$(GOBIN) get github.com/prometheus/procfs
-	$(GOBIN) get github.com/hashicorp/memberlist
-	$(GOBIN) get -u github.com/honeycombio/beeline-go/...
+	go get github.com/kelseyhightower/envconfig
+	go get github.com/mitchellh/goamz/aws
+	go get github.com/mitchellh/goamz/s3
+	go get golang.org/x/oauth2
+	go get github.com/prometheus/client_golang/prometheus
+	go get github.com/prometheus/procfs
+	go get github.com/hashicorp/memberlist
 
 cluster: cask
 	python run_cluster.py
