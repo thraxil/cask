@@ -59,6 +59,11 @@ var (
 		Name: "cask_cluster_total",
 		Help: "total size of cluster",
 	})
+	// disk space
+	diskFreeSpace = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "cask_disk_free_bytes",
+		Help: "free disk space available to this node",
+	})
 )
 
 func init() {
@@ -71,6 +76,8 @@ func init() {
 	prometheus.MustRegister(clusterJoins)
 	prometheus.MustRegister(clusterLeaves)
 	prometheus.MustRegister(clusterTotal)
+
+	prometheus.MustRegister(diskFreeSpace)
 }
 
 type config struct {

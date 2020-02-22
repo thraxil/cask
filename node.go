@@ -208,12 +208,14 @@ func doublecheckReplica(f []byte, key key) bool {
 
 func (n *node) WatchFreeSpace(minFreeSpace uint64, backend backend) {
 	for {
+		freeSpace := backend.FreeSpace()
+		diskFreeSpace.Set(float64(freeSpace))
 		if n.Writeable {
-			if backend.FreeSpace() < minFreeSpace {
+			if freeSpace < minFreeSpace {
 				n.Writeable = false
 			}
 		} else {
-			if backend.FreeSpace() > minFreeSpace {
+			if freeSpace > minFreeSpace {
 				n.Writeable = true
 			}
 		}
