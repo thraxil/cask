@@ -46,11 +46,13 @@ func (n *node) AddFile(key key, f io.Reader, secret string) bool {
 	resp, err := postFile(f, n.AddFileURL(), secret)
 	if err != nil {
 		log.Println("postFile returned false")
+		log.Println(err)
 		return false
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		log.Println("didn't get a 200")
+		log.Println(resp.StatusCode)
 		return false
 	}
 

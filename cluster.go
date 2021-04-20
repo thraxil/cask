@@ -355,7 +355,10 @@ func (c *cluster) AddFile(key key, f multipart.File, replication int, minReplica
 	nodes := c.WriteOrder(key.String())
 	var saveCount = 0
 	for _, n := range nodes {
-		if !n.Writeable {
+		if n.BaseURL == "" {
+			continue
+		}
+		if n.Writeable {
 			if n.AddFile(key, f, c.secret) {
 				saveCount++
 				n.LastSeen = time.Now()
@@ -364,7 +367,7 @@ func (c *cluster) AddFile(key key, f multipart.File, replication int, minReplica
 				c.FailedNeighbor(n)
 			}
 			f.Seek(0, 0)
-			if saveCount > replication {
+			if saveCount >= replication {
 				break
 			}
 		}
