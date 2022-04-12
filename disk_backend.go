@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+
+	"github.com/thraxil/randwalk"
 )
 
 type diskBackend struct {
@@ -295,9 +297,9 @@ func (d diskBackend) ActiveAntiEntropy(cluster *cluster, site site, interval int
 			time.Sleep(time.Duration(interval+jitter) * time.Second)
 			log.Println("AAE starting at the top")
 		}
-		err = filepath.Walk(d.Root, makeVisitor(visit, cluster, site))
+		err = randwalk.Walk(d.Root, makeVisitor(visit, cluster, site))
 		if err != nil {
-			log.Printf("filepath.Walk() returned %v\n", err)
+			log.Printf("randwalk.Walk() returned %v\n", err)
 		}
 	}
 }
