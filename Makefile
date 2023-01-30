@@ -13,6 +13,9 @@ install_deps:
 	go get github.com/prometheus/procfs
 	go get github.com/hashicorp/memberlist
 
+clustertmp:
+	mkdir /tmp/cask{0,1,2,3,4,5,6}
+
 cluster: cask
 	python run_cluster.py
 

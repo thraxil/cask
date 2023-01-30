@@ -10,44 +10,51 @@ import (
 	"strings"
 	"syscall"
 	"unsafe"
+
+	"golang.org/x/net/internal/iana"
+	"golang.org/x/net/internal/socket"
+
+	"golang.org/x/sys/unix"
 )
+
+const sockoptReceiveInterface = unix.IP_RECVIF
 
 var (
 	ctlOpts = [ctlMax]ctlOpt{
-		ctlTTL:       {sysIP_RECVTTL, 1, marshalTTL, parseTTL},
-		ctlDst:       {sysIP_RECVDSTADDR, net.IPv4len, marshalDst, parseDst},
-		ctlInterface: {sysIP_RECVIF, syscall.SizeofSockaddrDatalink, marshalInterface, parseInterface},
+		ctlTTL:       {unix.IP_RECVTTL, 1, marshalTTL, parseTTL},
+		ctlDst:       {unix.IP_RECVDSTADDR, net.IPv4len, marshalDst, parseDst},
+		ctlInterface: {unix.IP_RECVIF, syscall.SizeofSockaddrDatalink, marshalInterface, parseInterface},
 	}
 
-	sockOpts = [ssoMax]sockOpt{
-		ssoTOS:                {sysIP_TOS, ssoTypeInt},
-		ssoTTL:                {sysIP_TTL, ssoTypeInt},
-		ssoMulticastTTL:       {sysIP_MULTICAST_TTL, ssoTypeByte},
-		ssoMulticastInterface: {sysIP_MULTICAST_IF, ssoTypeInterface},
-		ssoMulticastLoopback:  {sysIP_MULTICAST_LOOP, ssoTypeInt},
-		ssoReceiveTTL:         {sysIP_RECVTTL, ssoTypeInt},
-		ssoReceiveDst:         {sysIP_RECVDSTADDR, ssoTypeInt},
-		ssoReceiveInterface:   {sysIP_RECVIF, ssoTypeInt},
-		ssoHeaderPrepend:      {sysIP_HDRINCL, ssoTypeInt},
-		ssoJoinGroup:          {sysMCAST_JOIN_GROUP, ssoTypeGroupReq},
-		ssoLeaveGroup:         {sysMCAST_LEAVE_GROUP, ssoTypeGroupReq},
-		ssoJoinSourceGroup:    {sysMCAST_JOIN_SOURCE_GROUP, ssoTypeGroupSourceReq},
-		ssoLeaveSourceGroup:   {sysMCAST_LEAVE_SOURCE_GROUP, ssoTypeGroupSourceReq},
-		ssoBlockSourceGroup:   {sysMCAST_BLOCK_SOURCE, ssoTypeGroupSourceReq},
-		ssoUnblockSourceGroup: {sysMCAST_UNBLOCK_SOURCE, ssoTypeGroupSourceReq},
+	sockOpts = map[int]*sockOpt{
+		ssoTOS:                {Option: socket.Option{Level: iana.ProtocolIP, Name: unix.IP_TOS, Len: 4}},
+		ssoTTL:                {Option: socket.Option{Level: iana.ProtocolIP, Name: unix.IP_TTL, Len: 4}},
+		ssoMulticastTTL:       {Option: socket.Option{Level: iana.ProtocolIP, Name: unix.IP_MULTICAST_TTL, Len: 1}},
+		ssoMulticastInterface: {Option: socket.Option{Level: iana.ProtocolIP, Name: unix.IP_MULTICAST_IF, Len: 4}},
+		ssoMulticastLoopback:  {Option: socket.Option{Level: iana.ProtocolIP, Name: unix.IP_MULTICAST_LOOP, Len: 4}},
+		ssoReceiveTTL:         {Option: socket.Option{Level: iana.ProtocolIP, Name: unix.IP_RECVTTL, Len: 4}},
+		ssoReceiveDst:         {Option: socket.Option{Level: iana.ProtocolIP, Name: unix.IP_RECVDSTADDR, Len: 4}},
+		ssoReceiveInterface:   {Option: socket.Option{Level: iana.ProtocolIP, Name: unix.IP_RECVIF, Len: 4}},
+		ssoHeaderPrepend:      {Option: socket.Option{Level: iana.ProtocolIP, Name: unix.IP_HDRINCL, Len: 4}},
+		ssoJoinGroup:          {Option: socket.Option{Level: iana.ProtocolIP, Name: unix.MCAST_JOIN_GROUP, Len: sizeofGroupReq}, typ: ssoTypeGroupReq},
+		ssoLeaveGroup:         {Option: socket.Option{Level: iana.ProtocolIP, Name: unix.MCAST_LEAVE_GROUP, Len: sizeofGroupReq}, typ: ssoTypeGroupReq},
+		ssoJoinSourceGroup:    {Option: socket.Option{Level: iana.ProtocolIP, Name: unix.MCAST_JOIN_SOURCE_GROUP, Len: sizeofGroupSourceReq}, typ: ssoTypeGroupSourceReq},
+		ssoLeaveSourceGroup:   {Option: socket.Option{Level: iana.ProtocolIP, Name: unix.MCAST_LEAVE_SOURCE_GROUP, Len: sizeofGroupSourceReq}, typ: ssoTypeGroupSourceReq},
+		ssoBlockSourceGroup:   {Option: socket.Option{Level: iana.ProtocolIP, Name: unix.MCAST_BLOCK_SOURCE, Len: sizeofGroupSourceReq}, typ: ssoTypeGroupSourceReq},
+		ssoUnblockSourceGroup: {Option: socket.Option{Level: iana.ProtocolIP, Name: unix.MCAST_UNBLOCK_SOURCE, Len: sizeofGroupSourceReq}, typ: ssoTypeGroupSourceReq},
 	}
 )
 
 func init() {
 	freebsdVersion, _ = syscall.SysctlUint32("kern.osreldate")
 	if freebsdVersion >= 1000000 {
-		sockOpts[ssoMulticastInterface].typ = ssoTypeIPMreqn
+		sockOpts[ssoMulticastInterface] = &sockOpt{Option: socket.Option{Level: iana.ProtocolIP, Name: unix.IP_MULTICAST_IF, Len: unix.SizeofIPMreqn}, typ: ssoTypeIPMreqn}
 	}
 	if runtime.GOOS == "freebsd" && runtime.GOARCH == "386" {
 		archs, _ := syscall.Sysctl("kern.supported_archs")
 		for _, s := range strings.Fields(archs) {
 			if s == "amd64" {
-				freebsd32o64 = true
+				compatFreeBSD32 = true
 				break
 			}
 		}

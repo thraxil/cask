@@ -143,11 +143,11 @@ func main() {
 	log.Println("Base URL: " + c.BaseURL)
 	log.Println("=======================================")
 
-	http.HandleFunc("/", prometheus.InstrumentHandler("root", makeHandler(indexHandler, s)))
-	http.HandleFunc("/local/", prometheus.InstrumentHandler("local", makeHandler(localHandler, s)))
-	http.HandleFunc("/file/", prometheus.InstrumentHandler("file", makeHandler(fileHandler, s)))
-	http.HandleFunc("/join/", prometheus.InstrumentHandler("join", makeHandler(joinHandler, s)))
-	http.HandleFunc("/config/", prometheus.InstrumentHandler("file", makeHandler(configHandler, s)))
+	http.HandleFunc("/", makeHandler(indexHandler, s))
+	http.HandleFunc("/local/", makeHandler(localHandler, s))
+	http.HandleFunc("/file/", makeHandler(fileHandler, s))
+	http.HandleFunc("/join/", makeHandler(joinHandler, s))
+	http.HandleFunc("/config/", makeHandler(configHandler, s))
 
 	http.HandleFunc("/favicon.ico", faviconHandler)
 	http.Handle("/metrics", promhttp.Handler())

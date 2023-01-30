@@ -2,24 +2,26 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build darwin || linux || solaris
 // +build darwin linux solaris
 
 package ipv4
 
 import (
-	"syscall"
+	"net"
 	"unsafe"
 
 	"golang.org/x/net/internal/iana"
+	"golang.org/x/net/internal/socket"
+
+	"golang.org/x/sys/unix"
 )
 
 func marshalPacketInfo(b []byte, cm *ControlMessage) []byte {
-	m := (*syscall.Cmsghdr)(unsafe.Pointer(&b[0]))
-	m.Level = iana.ProtocolIP
-	m.Type = sysIP_PKTINFO
-	m.SetLen(syscall.CmsgLen(sizeofInetPktinfo))
+	m := socket.ControlMessage(b)
+	m.MarshalHeader(iana.ProtocolIP, unix.IP_PKTINFO, sizeofInetPktinfo)
 	if cm != nil {
-		pi := (*inetPktinfo)(unsafe.Pointer(&b[syscall.CmsgLen(0)]))
+		pi := (*inetPktinfo)(unsafe.Pointer(&m.Data(sizeofInetPktinfo)[0]))
 		if ip := cm.Src.To4(); ip != nil {
 			copy(pi.Spec_dst[:], ip)
 		}
@@ -27,11 +29,14 @@ func marshalPacketInfo(b []byte, cm *ControlMessage) []byte {
 			pi.setIfindex(cm.IfIndex)
 		}
 	}
-	return b[syscall.CmsgSpace(sizeofInetPktinfo):]
+	return m.Next(sizeofInetPktinfo)
 }
 
 func parsePacketInfo(cm *ControlMessage, b []byte) {
 	pi := (*inetPktinfo)(unsafe.Pointer(&b[0]))
 	cm.IfIndex = int(pi.Ifindex)
-	cm.Dst = pi.Addr[:]
+	if len(cm.Dst) < net.IPv4len {
+		cm.Dst = make(net.IP, net.IPv4len)
+	}
+	copy(cm.Dst, pi.Addr[:])
 }

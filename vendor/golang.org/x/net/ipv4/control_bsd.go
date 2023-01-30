@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build darwin dragonfly freebsd netbsd openbsd
+//go:build aix || darwin || dragonfly || freebsd || netbsd || openbsd
+// +build aix darwin dragonfly freebsd netbsd openbsd
 
 package ipv4
 
@@ -12,29 +13,32 @@ import (
 	"unsafe"
 
 	"golang.org/x/net/internal/iana"
+	"golang.org/x/net/internal/socket"
+
+	"golang.org/x/sys/unix"
 )
 
 func marshalDst(b []byte, cm *ControlMessage) []byte {
-	m := (*syscall.Cmsghdr)(unsafe.Pointer(&b[0]))
-	m.Level = iana.ProtocolIP
-	m.Type = sysIP_RECVDSTADDR
-	m.SetLen(syscall.CmsgLen(net.IPv4len))
-	return b[syscall.CmsgSpace(net.IPv4len):]
+	m := socket.ControlMessage(b)
+	m.MarshalHeader(iana.ProtocolIP, unix.IP_RECVDSTADDR, net.IPv4len)
+	return m.Next(net.IPv4len)
 }
 
 func parseDst(cm *ControlMessage, b []byte) {
-	cm.Dst = b[:net.IPv4len]
+	if len(cm.Dst) < net.IPv4len {
+		cm.Dst = make(net.IP, net.IPv4len)
+	}
+	copy(cm.Dst, b[:net.IPv4len])
 }
 
 func marshalInterface(b []byte, cm *ControlMessage) []byte {
-	m := (*syscall.Cmsghdr)(unsafe.Pointer(&b[0]))
-	m.Level = iana.ProtocolIP
-	m.Type = sysIP_RECVIF
-	m.SetLen(syscall.CmsgLen(syscall.SizeofSockaddrDatalink))
-	return b[syscall.CmsgSpace(syscall.SizeofSockaddrDatalink):]
+	m := socket.ControlMessage(b)
+	m.MarshalHeader(iana.ProtocolIP, sockoptReceiveInterface, syscall.SizeofSockaddrDatalink)
+	return m.Next(syscall.SizeofSockaddrDatalink)
 }
 
 func parseInterface(cm *ControlMessage, b []byte) {
-	sadl := (*syscall.SockaddrDatalink)(unsafe.Pointer(&b[0]))
+	var sadl syscall.SockaddrDatalink
+	copy((*[unsafe.Sizeof(sadl)]byte)(unsafe.Pointer(&sadl))[:], b)
 	cm.IfIndex = int(sadl.Index)
 }
