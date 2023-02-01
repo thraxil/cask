@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"mime/multipart"
@@ -56,7 +55,7 @@ func (n *node) AddFile(key key, f io.Reader, secret string) bool {
 		return false
 	}
 
-	b, _ := ioutil.ReadAll(resp.Body)
+	b, _ := io.ReadAll(resp.Body)
 	// make sure it saved it as the same key
 	return string(b) == key.String()
 }
@@ -119,7 +118,7 @@ func (n *node) Retrieve(key key, secret string) ([]byte, error) {
 	if resp.Status != "200 OK" {
 		return nil, errors.New("404, probably")
 	}
-	b, _ := ioutil.ReadAll(resp.Body)
+	b, _ := io.ReadAll(resp.Body)
 	return b, nil
 }
 
@@ -176,7 +175,7 @@ func (n *node) processRetrieveInfoResponse(resp *http.Response) (bool, error) {
 	if resp.Status != "200 OK" {
 		return false, errors.New("404, probably")
 	}
-	ioutil.ReadAll(resp.Body)
+	io.ReadAll(resp.Body)
 	return true, nil
 }
 

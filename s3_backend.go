@@ -2,7 +2,6 @@ package main
 
 import (
 	"io"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"time"
@@ -37,7 +36,7 @@ func (s s3Backend) String() string {
 }
 
 func (s *s3Backend) Write(key key, r io.ReadCloser) error {
-	b, err := ioutil.ReadAll(r)
+	b, err := io.ReadAll(r)
 	if err != nil {
 		log.Println("error writing into buffer")
 		log.Println(err)

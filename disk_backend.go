@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -56,7 +55,7 @@ func (d *diskBackend) Write(key key, r io.ReadCloser) error {
 
 func (d diskBackend) Read(key key) ([]byte, error) {
 	path := d.Root + key.Algorithm + "/" + key.AsPath() + "/data"
-	return ioutil.ReadFile(path)
+	return os.ReadFile(path)
 }
 
 func (d diskBackend) Exists(key key) bool {
@@ -287,7 +286,7 @@ func (d diskBackend) ActiveAntiEntropy(cluster *cluster, site site, interval int
 	aaeOffset = rand.Intn(10000)
 	var jitter = 1
 	for {
-		_, err := ioutil.ReadDir(d.Root)
+		_, err := os.ReadDir(d.Root)
 		if err != nil {
 			fmt.Printf("Can't get a directory listing for %s. Let's fail fast.\n", d.Root)
 			os.Exit(1)
