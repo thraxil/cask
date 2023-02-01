@@ -182,6 +182,8 @@ func setupBackend(c config) backend {
 		} else {
 			backend = newS3Backend(c.S3AccessKey, c.S3SecretKey, c.S3Bucket)
 		}
+	} else {
+		log.Fatal("unsupported backend type")
 	}
 	return backend
 }
