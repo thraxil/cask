@@ -1,6 +1,7 @@
 cask: *.go
 	go build .
 
+.PHONY: test
 test: cask
 	go test .
 
