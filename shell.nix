@@ -1,8 +1,8 @@
-{ pkgs ? import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/06278c77b5d162e62df170fec307e83f1812d94b.tar.gz") {} }:
+{ pkgs ? import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/0591d6b57bfeb55dfeec99a671843337bc2c3323.tar.gz") {} }:
 
 pkgs.mkShell {
   buildInputs = [
-    pkgs.go_1_19
+    pkgs.go_1_20
     pkgs.gcc
     pkgs.libcap
     pkgs.python310
