@@ -6,7 +6,7 @@ require (
 	github.com/hashicorp/memberlist v0.5.0
 	github.com/kelseyhightower/envconfig v1.3.0
 	github.com/mitchellh/goamz v0.0.0-20150317174335-caaaea8b30ee
-	github.com/prometheus/client_golang v1.4.0
+	github.com/prometheus/client_golang v1.11.1
 	github.com/thraxil/randwalk v0.0.0-20170713144412-615038b03cd6
 )
 
@@ -28,8 +28,8 @@ require (
 	github.com/miekg/dns v1.1.41 // indirect
 	github.com/motain/gocheck v0.0.0-20131023154940-9beb271d26e6 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
-	github.com/prometheus/common v0.9.1 // indirect
-	github.com/prometheus/procfs v0.0.8 // indirect
+	github.com/prometheus/common v0.26.0 // indirect
+	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
 	github.com/stretchr/testify v1.8.0 // indirect
 	github.com/vaughan0/go-ini v0.0.0-20130923145212-a98ad7ee00ec // indirect
