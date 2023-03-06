@@ -1,6 +1,1 @@
-{ pkgs }: {
-    deps = [
-        pkgs.go
-        pkgs.gopls
-    ];
-}
+shell.nix
