@@ -143,14 +143,21 @@ func main() {
 	log.Println("Base URL: " + c.BaseURL)
 	log.Println("=======================================")
 
-	http.HandleFunc("/", makeHandler(indexHandler, s))
-	http.HandleFunc("/local/", makeHandler(localHandler, s))
-	http.HandleFunc("/file/", makeHandler(fileHandler, s))
-	http.HandleFunc("/join/", makeHandler(joinHandler, s))
-	http.HandleFunc("/config/", makeHandler(configHandler, s))
+	http.HandleFunc("GET /", makeHandler(clusterInfoHandler, s))
+	http.HandleFunc("POST /", makeHandler(postFileHandler, s))
 
-	http.HandleFunc("/favicon.ico", faviconHandler)
-	http.Handle("/metrics", promhttp.Handler())
+	http.HandleFunc("GET /local/", makeHandler(localPostFormHandler, s))
+	http.HandleFunc("POST /local/", makeHandler(handleLocalPost, s))
+	http.HandleFunc("GET /local/{key}/", makeHandler(localHandler, s))
+	http.HandleFunc("HEAD /local/{key}/", makeHandler(localHandler, s))
+
+	http.HandleFunc("GET /file/{key}/", makeHandler(fileHandler, s))
+	http.HandleFunc("GET /join/", makeHandler(joinFormHandler, s))
+	http.HandleFunc("POST /join/", makeHandler(joinHandler, s))
+	http.HandleFunc("GET /config/", makeHandler(configHandler, s))
+
+	http.HandleFunc("GET /favicon.ico", faviconHandler)
+	http.Handle("GET /metrics", promhttp.Handler())
 
 	// some defaults
 	if c.ReadTimeout == 0 {

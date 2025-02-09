@@ -6,7 +6,7 @@ test: cask
 	go test .
 
 clustertmp:
-	mkdir /tmp/cask{0,1,2,3,4,5,6}
+	mkdir -p /tmp/cask{0,1,2,3,4,5,6}
 
 .PHONY: cluster
 cluster: cask clustertmp

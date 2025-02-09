@@ -11,6 +11,17 @@ import (
 	"text/template"
 )
 
+func localPostFormHandler(w http.ResponseWriter, r *http.Request, s *site) {
+	secret := r.Header.Get("X-Cask-Cluster-Secret")
+	if !s.Cluster.CheckSecret(secret) {
+		log.Println("unauthorized local file request")
+		http.Error(w, "sorry, need the secret knock", 403)
+		return
+	}
+	fmt.Fprintf(w, "show form/handle post\n")
+	return
+}
+
 // read/write file requests that shall only touch
 // the current node. No cluster interaction.
 func localHandler(w http.ResponseWriter, r *http.Request, s *site) {
@@ -20,57 +31,50 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *site) {
 		http.Error(w, "sorry, need the secret knock", 403)
 		return
 	}
-	parts := strings.Split(r.URL.String(), "/")
-	if len(parts) == 3 {
-		if r.Method == "POST" {
-			handleLocalPost(w, r, s)
-			return
-		}
-		fmt.Fprintf(w, "show form/handle post\n")
+	key := r.PathValue("key")
+	log.Printf("%s /local/%s/\n", r.Method, key)
+	k, err := keyFromString(key)
+	if err != nil {
+		http.Error(w, "invalid key\n", 400)
 		return
 	}
-	if len(parts) == 4 {
-		key := parts[2]
-		log.Printf("%s /local/%s/\n", r.Method, parts[2])
-		k, err := keyFromString(key)
-		if err != nil {
-			http.Error(w, "invalid key\n", 400)
+	if inm := r.Header.Get("If-None-Match"); inm != "" {
+		if inm == "\""+key+"\"" {
+			w.WriteHeader(http.StatusNotModified)
 			return
-		}
-		if inm := r.Header.Get("If-None-Match"); inm != "" {
-			if inm == "\""+key+"\"" {
-				w.WriteHeader(http.StatusNotModified)
-				return
-			}
-		}
-		if !s.Backend.Exists(*k) {
-			http.Error(w, "not found\n", 404)
-			return
-		}
-		if r.Method == "HEAD" {
-			w.WriteHeader(200)
-			return
-		}
-		if r.Method == "GET" {
-			data, err := s.Backend.Read(*k)
-			if err != nil {
-				log.Println(err)
-				http.Error(w, "error reading file", 500)
-				return
-			}
-			w.Header().Set("Content-Type", "application/octet")
-			w.Header().Set("ETag", "\""+key+"\"")
-			w.Write(data)
-			// kick off a background goroutine to do read-repair
-			go func() {
-				s.VerifyKey(*k)
-				s.Rebalance(*k)
-			}()
 		}
 	}
+	if !s.Backend.Exists(*k) {
+		http.Error(w, "not found\n", 404)
+		return
+	}
+	if r.Method == "HEAD" {
+		w.WriteHeader(200)
+		return
+	}
+	data, err := s.Backend.Read(*k)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "error reading file", 500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/octet")
+	w.Header().Set("ETag", "\""+key+"\"")
+	w.Write(data)
+	// kick off a background goroutine to do read-repair
+	go func() {
+		s.VerifyKey(*k)
+		s.Rebalance(*k)
+	}()
 }
 
 func handleLocalPost(w http.ResponseWriter, r *http.Request, s *site) {
+	secret := r.Header.Get("X-Cask-Cluster-Secret")
+	if !s.Cluster.CheckSecret(secret) {
+		log.Println("unauthorized local file request")
+		http.Error(w, "sorry, need the secret knock", 403)
+		return
+	}
 	log.Println("write a file")
 	if !s.Node.Writeable {
 		http.Error(w, "this node is read-only", 503)
@@ -123,47 +127,30 @@ func serveDirect(w http.ResponseWriter, key key, s *site) bool {
 }
 
 func fileHandler(w http.ResponseWriter, r *http.Request, s *site) {
-	parts := strings.Split(r.URL.String(), "/")
-	if len(parts) == 4 {
-		key := parts[2]
-		log.Printf("%s /file/%s/\n", r.Method, parts[2])
-		k, err := keyFromString(key)
-		if err != nil {
-			http.Error(w, "invalid key\n", 400)
+	key := r.PathValue("key")
+	log.Printf("%s /file/%s/\n", r.Method, key)
+	k, err := keyFromString(key)
+	if err != nil {
+		http.Error(w, "invalid key\n", 400)
+		return
+	}
+	if inm := r.Header.Get("If-None-Match"); inm != "" {
+		if inm == "\""+key+"\"" {
+			w.WriteHeader(http.StatusNotModified)
 			return
 		}
-		if inm := r.Header.Get("If-None-Match"); inm != "" {
-			if inm == "\""+key+"\"" {
-				w.WriteHeader(http.StatusNotModified)
-				return
-			}
-		}
-		if serveDirect(w, *k, s) {
-			w.Header().Set("ETag", "\""+key+"\"")
-			return
-		}
-		data, err := s.Cluster.Retrieve(*k)
-		if err != nil {
-			http.Error(w, "not found", 404)
-			return
-		}
+	}
+	if serveDirect(w, *k, s) {
 		w.Header().Set("ETag", "\""+key+"\"")
-		w.Write(data)
-	} else {
-		http.Error(w, "bad request", 400)
-	}
-}
-
-func indexHandler(w http.ResponseWriter, r *http.Request, s *site) {
-	if r.Method == "GET" {
-		clusterInfoHandler(w, r, s)
 		return
 	}
-	if r.Method == "POST" {
-		postFileHandler(w, r, s)
+	data, err := s.Cluster.Retrieve(*k)
+	if err != nil {
+		http.Error(w, "not found", 404)
 		return
 	}
-	http.Error(w, "method not supported", 405)
+	w.Header().Set("ETag", "\""+key+"\"")
+	w.Write(data)
 }
 
 type clusterInfoPage struct {
@@ -222,31 +209,30 @@ func postFileHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	w.Write(b)
 }
 
+func joinFormHandler(w http.ResponseWriter, r *http.Request, s *site) {
+	w.Write([]byte(joinTemplate))
+}
+
 func joinHandler(w http.ResponseWriter, r *http.Request, s *site) {
-	if r.Method == "POST" {
-		if r.FormValue("url") == "" {
-			fmt.Fprint(w, "no url specified")
-			return
-		}
-		u := r.FormValue("url")
-		secret := r.FormValue("secret")
-		if !s.Cluster.CheckSecret(secret) {
-			log.Println("got an unauthorized join attempt")
-			log.Println(secret)
-			http.Error(w, "need to know the secret knock", 403)
-			return
-		}
-		parts := strings.Split(u, ",")
-		_, err := mlist.Join(parts)
-		if err != nil {
-			fmt.Fprint(w, err)
-			return
-		}
-		fmt.Fprintf(w, "Added node")
-	} else {
-		// show form
-		w.Write([]byte(joinTemplate))
+	if r.FormValue("url") == "" {
+		fmt.Fprint(w, "no url specified")
+		return
 	}
+	u := r.FormValue("url")
+	secret := r.FormValue("secret")
+	if !s.Cluster.CheckSecret(secret) {
+		log.Println("got an unauthorized join attempt")
+		log.Println(secret)
+		http.Error(w, "need to know the secret knock", 403)
+		return
+	}
+	parts := strings.Split(u, ",")
+	_, err := mlist.Join(parts)
+	if err != nil {
+		fmt.Fprint(w, err)
+		return
+	}
+	fmt.Fprintf(w, "Added node")
 }
 
 func configHandler(w http.ResponseWriter, r *http.Request, s *site) {
