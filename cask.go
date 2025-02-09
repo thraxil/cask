@@ -149,7 +149,6 @@ func main() {
 	http.HandleFunc("GET /local/", makeHandler(localPostFormHandler, s))
 	http.HandleFunc("POST /local/", makeHandler(handleLocalPost, s))
 	http.HandleFunc("GET /local/{key}/", makeHandler(localHandler, s))
-	http.HandleFunc("HEAD /local/{key}/", makeHandler(localHandler, s))
 
 	http.HandleFunc("GET /file/{key}/", makeHandler(fileHandler, s))
 	http.HandleFunc("GET /join/", makeHandler(joinFormHandler, s))
