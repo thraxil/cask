@@ -4,7 +4,7 @@ go 1.23.3
 
 require (
 	github.com/hashicorp/memberlist v0.5.0
-	github.com/kelseyhightower/envconfig v1.3.0
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mitchellh/goamz v0.0.0-20150317174335-caaaea8b30ee
 	github.com/prometheus/client_golang v1.11.1
 	github.com/thraxil/randwalk v0.0.0-20170713144412-615038b03cd6
