@@ -72,4 +72,41 @@ func Test_keyFromString(t *testing.T) {
 	if err == nil {
 		t.Error("sha1 hash must be 40 chars")
 	}
+
+	// valid
+	k, err := keyFromString("sha1:ae28605f0ffc34fe5314342f78efaa13ee45f699")
+	if err != nil {
+		t.Error("valid keyFromString failed")
+	}
+	if k.String() != "sha1:ae28605f0ffc34fe5314342f78efaa13ee45f699" {
+		t.Error("keyFromString returned wrong key")
+	}
+}
+
+func Test_String(t *testing.T) {
+	k := key{
+		Algorithm: "sha1",
+		Value:     []byte("ae28605f0ffc34fe5314342f78efaa13ee45f699"),
+	}
+	if k.String() != "sha1:ae28605f0ffc34fe5314342f78efaa13ee45f699" {
+		t.Error("String() returned wrong value")
+	}
+}
+
+func Test_Invalid(t *testing.T) {
+	k := key{
+		Algorithm: "sha256",
+		Value:     []byte("ae28605f0ffc34fe5314342f78efaa13ee45f699"),
+	}
+	if k.Valid() {
+		t.Error("should be invalid with wrong algorithm")
+	}
+
+	k = key{
+		Algorithm: "sha1",
+		Value:     []byte("short"),
+	}
+	if k.Valid() {
+		t.Error("should be invalid with wrong length")
+	}
 }
