@@ -1,6 +1,6 @@
 module github.com/thraxil/cask
 
-go 1.23.3
+go 1.25
 
 require (
 	github.com/hashicorp/memberlist v0.5.0
