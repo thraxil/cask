@@ -75,6 +75,12 @@ func handleLocalPost(w http.ResponseWriter, r *http.Request, s *site) {
 		http.Error(w, "sorry, need the secret knock", 403)
 		return
 	}
+
+	if r.ContentLength > s.MaxUploadSize {
+		http.Error(w, "file too large", http.StatusRequestEntityTooLarge)
+		return
+	}
+
 	log.Println("write a file")
 	if !s.Node.Writeable {
 		http.Error(w, "this node is read-only", 503)
@@ -185,6 +191,10 @@ type postResponse struct {
 func postFileHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	log.Println("add a file")
 
+	if r.ContentLength > s.MaxUploadSize {
+		http.Error(w, "file too large", http.StatusRequestEntityTooLarge)
+		return
+	}
 	f, _, _ := r.FormFile("file")
 	defer f.Close()
 	h := sha1.New()

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,6 +16,10 @@ type mockCluster struct {
 
 func (m *mockCluster) CheckSecret(s string) bool {
 	return m.secret == s
+}
+
+func (m *mockCluster) AddFile(k key, r io.Reader, replication int, minReplication int) bool {
+	return true
 }
 
 // mockBackend implements the Backend interface
@@ -98,3 +104,56 @@ func TestLocalPostFormHandler(t *testing.T) {
 	}
 }
 
+func TestFileUploadSizeLimit(t *testing.T) {
+	s := &site{
+		MaxUploadSize: 1024,
+		Node:          &node{Writeable: true},
+		Cluster:       &cluster{secret: "test_secret"},
+	}
+
+	// Create a large file
+
+	largeContent := make([]byte, 2048)
+	for i := range largeContent {
+		largeContent[i] = 'a'
+	}
+
+	// Create a multipart form
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, _ := writer.CreateFormFile("file", "largefile.txt")
+	part.Write(largeContent)
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/local/", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("X-Cask-Cluster-Secret", "test_secret")
+	req.ContentLength = int64(body.Len())
+
+	rr := httptest.NewRecorder()
+	handleLocalPost(rr, req, s)
+
+	if status := rr.Code; status != http.StatusRequestEntityTooLarge {
+		t.Errorf("handleLocalPost returned wrong status code: got %v want %v",
+			status, http.StatusRequestEntityTooLarge)
+	}
+
+	// Reset for the next request
+	body.Reset()
+	writer = multipart.NewWriter(body)
+	part, _ = writer.CreateFormFile("file", "largefile.txt")
+	part.Write(largeContent)
+	writer.Close()
+
+	req = httptest.NewRequest("POST", "/", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.ContentLength = int64(body.Len())
+
+	rr = httptest.NewRecorder()
+	postFileHandler(rr, req, s)
+
+	if status := rr.Code; status != http.StatusRequestEntityTooLarge {
+		t.Errorf("postFileHandler returned wrong status code: got %v want %v",
+			status, http.StatusRequestEntityTooLarge)
+	}
+}

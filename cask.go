@@ -87,6 +87,7 @@ type config struct {
 	Backend         string
 	DiskBackendRoot string `envconfig:"DISK_BACKEND_ROOT"`
 	KeepFree        uint64 `envconfig:"KEEP_FREE"`
+	MaxUploadSize   int64  `envconfig:"MAX_UPLOAD_SIZE"`
 
 	S3AccessKey string `envconfig:"S3_ACCESS_KEY"`
 	S3SecretKey string `envconfig:"S3_SECRET_KEY"`
@@ -113,6 +114,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
+	if c.MaxUploadSize == 0 {
+		// default to 2GB
+		c.MaxUploadSize = 2 * 1024 * 1024 * 1024
+	}
 	log.SetPrefix(c.UUID[:8] + " ")
 	n := newNode(c.UUID, c.BaseURL, c.Writeable)
 
@@ -133,7 +138,7 @@ func main() {
 	if err != nil {
 		log.Fatal("couldn't start gossip", err)
 	}
-	s := newSite(n, cluster, backend, c.Replication, c.MaxReplication, c.ClusterSecret, c.AAEInterval)
+	s := newSite(n, cluster, backend, c.Replication, c.MaxReplication, c.ClusterSecret, c.AAEInterval, c.MaxUploadSize)
 	go s.ActiveAntiEntropy()
 	go n.WatchFreeSpace(c.KeepFree, backend)
 
