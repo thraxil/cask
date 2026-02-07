@@ -32,7 +32,7 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *site) {
 		return
 	}
 	key := r.PathValue("key")
-	log.Printf("%s /local/%s/\n", r.Method, key)
+	log.Printf("/local/%s/\n", key)
 	k, err := keyFromString(key)
 	if err != nil {
 		http.Error(w, "invalid key\n", 400)
@@ -48,10 +48,7 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *site) {
 		http.Error(w, "not found\n", 404)
 		return
 	}
-	if r.Method == "HEAD" {
-		w.WriteHeader(200)
-		return
-	}
+
 	data, err := s.Backend.Read(*k)
 	if err != nil {
 		log.Println(err)
@@ -97,7 +94,7 @@ func handleLocalPost(w http.ResponseWriter, r *http.Request, s *site) {
 	}
 	if s.Backend.Exists(*key) {
 		log.Println("already exists, don't need to do anything")
-		fmt.Fprintf(w, key.String())
+		fmt.Fprintf(w, "%s", key.String())
 		return
 	}
 	f.Seek(0, 0)
@@ -106,35 +103,15 @@ func handleLocalPost(w http.ResponseWriter, r *http.Request, s *site) {
 		http.Error(w, "could not write file", 500)
 		return
 	}
-	fmt.Fprintf(w, key.String())
+	fmt.Fprintf(w, "%s", key.String())
 	return
 }
 
-func serveDirect(w http.ResponseWriter, key key, s *site) bool {
-	if !s.Backend.Exists(key) {
-		return false
-	}
-	data, err := s.Backend.Read(key)
-	if err != nil {
-		log.Println(err)
-		return false
-	}
-	w.Header().Set("Content-Type", "application/octet")
-	w.Write(data)
-	log.Println("served direct")
 
-	// kick off a background goroutine to do read-repair
-	go func() {
-		s.VerifyKey(key)
-		s.Rebalance(key)
-	}()
-
-	return true
-}
 
 func fileHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	key := r.PathValue("key")
-	log.Printf("%s /file/%s/\n", r.Method, key)
+	log.Printf("/file/%s/\n", key)
 	k, err := keyFromString(key)
 	if err != nil {
 		http.Error(w, "invalid key\n", 400)
@@ -146,10 +123,24 @@ func fileHandler(w http.ResponseWriter, r *http.Request, s *site) {
 			return
 		}
 	}
-	if serveDirect(w, *k, s) {
+	if s.Backend.Exists(*k) {
+		data, err := s.Backend.Read(*k)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, "error reading file", 500)
+			return
+		}
+		w.Header().Set("Content-Type", "application/octet")
 		w.Header().Set("ETag", "\""+key+"\"")
+		w.Write(data)
+		// kick off a background goroutine to do read-repair
+		go func() {
+			s.VerifyKey(*k)
+			s.Rebalance(*k)
+		}()
 		return
 	}
+
 	data, err := s.Cluster.Retrieve(*k)
 	if err != nil {
 		http.Error(w, "not found", 404)
