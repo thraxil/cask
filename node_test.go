@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -138,6 +139,57 @@ func Test_AddFile(t *testing.T) {
 		r := strings.NewReader("")
 		if n.AddFile(*k, r, "secret") {
 			t.Error("AddFile returned true on invalid URL")
+		}
+	}
+}
+
+func Test_postFile(t *testing.T) {
+	// Success
+	{
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != "POST" {
+				t.Errorf("Expected POST, got %s", r.Method)
+			}
+			// Check multipart
+			err := r.ParseMultipartForm(1024)
+			if err != nil {
+				t.Errorf("failed to parse multipart form: %v", err)
+			}
+			file, _, err := r.FormFile("file")
+			if err != nil {
+				t.Errorf("failed to get file from form: %v", err)
+			}
+			defer file.Close()
+			content, _ := io.ReadAll(file)
+			if string(content) != "test content" {
+				t.Errorf("Expected 'test content', got '%s'", string(content))
+			}
+
+			if r.Header.Get("X-Cask-Cluster-Secret") != "secret" {
+				t.Errorf("Expected secret header, got %s", r.Header.Get("X-Cask-Cluster-Secret"))
+			}
+
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		r := strings.NewReader("test content")
+		resp, err := postFile(r, server.URL, "secret")
+		if err != nil {
+			t.Fatalf("postFile failed: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("Expected 200, got %d", resp.StatusCode)
+		}
+	}
+
+	// Invalid URL
+	{
+		r := strings.NewReader("test content")
+		_, err := postFile(r, ":::invalid-url:::", "secret")
+		if err == nil {
+			t.Error("postFile should have failed with invalid URL")
 		}
 	}
 }
