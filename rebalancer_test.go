@@ -8,27 +8,6 @@ import (
 	"time"
 )
 
-// MockBackendFull extends MockBackend to support reading and deleting
-type MockBackendFull struct {
-	MockBackend
-	data       map[string][]byte
-	deletedKey string
-}
-
-func (m *MockBackendFull) Read(k key) ([]byte, error) {
-	if d, ok := m.data[k.String()]; ok {
-		return d, nil
-	}
-	return nil, io.EOF
-}
-
-func (m *MockBackendFull) Delete(k key) error {
-	m.deletedKey = k.String()
-	return nil
-}
-
-func (m *MockBackendFull) FreeSpace() uint64 { return 1000 }
-
 func Test_newRebalancer(t *testing.T) {
 	n := newNode("testuuid", "http://localhost:1000", true)
 	c := newCluster(n, "secret", 60)
