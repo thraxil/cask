@@ -88,7 +88,7 @@ func Test_AddFile(t *testing.T) {
 			}
 
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("sha1:da39a3ee5e6b4b0d3255bfef95601890afd80709"))
+			_, _ = w.Write([]byte("sha1:da39a3ee5e6b4b0d3255bfef95601890afd80709"))
 		}))
 		defer server.Close()
 
@@ -120,7 +120,7 @@ func Test_AddFile(t *testing.T) {
 	{
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("sha1:otherkey"))
+			_, _ = w.Write([]byte("sha1:otherkey"))
 		}))
 		defer server.Close()
 
