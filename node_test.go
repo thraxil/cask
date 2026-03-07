@@ -400,26 +400,12 @@ func Test_postFile(t *testing.T) {
 					func Test_processRetrieveInfoResponse_Nil(t *testing.T) {
 						n := newNode("testuuid", "http://localhost:1000", true)
 						_, err := n.processRetrieveInfoResponse(nil)
-							if err == nil {
-								t.Error("processRetrieveInfoResponse should fail with nil response")
+								if err == nil {
+									t.Error("processRetrieveInfoResponse should fail with nil response")
+								}
 							}
-						}
-						
-						type MockBackend struct {
-							freeSpace uint64
-						}
-						
-						func (m MockBackend) String() string                        { return "mock" }
-						func (m MockBackend) Write(key key, r io.ReadCloser) error  { return nil }
-						func (m MockBackend) Read(key key) ([]byte, error)          { return nil, nil }
-						func (m MockBackend) Exists(key key) bool                   { return false }
-						func (m MockBackend) Delete(key key) error                  { return nil }
-						func (m MockBackend) ActiveAntiEntropy(c *cluster, s site, i int) {}
-						func (m MockBackend) NewVerifier(c *cluster) verifier       { return nil }
-						func (m MockBackend) FreeSpace() uint64                     { return m.freeSpace }
-						
-						func Test_updateFreeSpaceStatus(t *testing.T) {
-							n := newNode("testuuid", "http://localhost:1000", true)
+							
+							func Test_updateFreeSpaceStatus(t *testing.T) {							n := newNode("testuuid", "http://localhost:1000", true)
 							
 							// Case 1: Writeable, FreeSpace > Min => Stay Writeable
 							mb := MockBackend{freeSpace: 2000}
