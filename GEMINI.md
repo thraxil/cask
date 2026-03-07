@@ -20,13 +20,10 @@ You can use the following `make` commands to build and test the project:
 *   **To search for a function:** `search_file_content(pattern='func handleSet', include='*.go')`
 *   **To run the tests:** `run_shell_command(command='make test')`
 
-## General Best Practices
-*   Be clear and concise in your requests.
-*   Provide as much context as necessary, especially for code modifications.
-*   If asking for code changes, specify the file paths and the exact code snippets to modify.
-*   Review the agent's proposed changes or actions carefully before confirming.
+## Project guidelines
 
-## Troubleshooting and Feedback
+- Run `make test` before beginning work to ensure that the code is starting in a clean state.
+- Run `make test` and `make lint` when you are done with all changes and fix any pending issues
+- Always develop with strict red/green TDD unless told otherwise.
 
-*   If you encounter unexpected behavior, please provide detailed steps to reproduce.
-*   For any feedback or to report a bug, use the `/bug` command.
+

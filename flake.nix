@@ -15,6 +15,7 @@
         gcc
         libcap
         python310
+        golangci-lint
       ];
       MY_ENVIRONMENT_VARIABLE = "world";
     };

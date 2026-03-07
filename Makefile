@@ -19,3 +19,7 @@ clustertmp:
 .PHONY: cluster
 cluster: cask clustertmp
 	python run_cluster.py
+
+.PHONY: lint
+lint:
+	golangci-lint run
