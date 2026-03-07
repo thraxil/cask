@@ -210,19 +210,23 @@ func doublecheckReplica(f []byte, key key) bool {
 	return "sha1:"+nhash == key.String()
 }
 
+func (n *node) updateFreeSpaceStatus(minFreeSpace uint64, backend backend) {
+	freeSpace := backend.FreeSpace()
+	diskFreeSpace.Set(float64(freeSpace))
+	if n.Writeable {
+		if freeSpace < minFreeSpace {
+			n.Writeable = false
+		}
+	} else {
+		if freeSpace > minFreeSpace {
+			n.Writeable = true
+		}
+	}
+}
+
 func (n *node) WatchFreeSpace(minFreeSpace uint64, backend backend) {
 	for {
-		freeSpace := backend.FreeSpace()
-		diskFreeSpace.Set(float64(freeSpace))
-		if n.Writeable {
-			if freeSpace < minFreeSpace {
-				n.Writeable = false
-			}
-		} else {
-			if freeSpace > minFreeSpace {
-				n.Writeable = true
-			}
-		}
+		n.updateFreeSpaceStatus(minFreeSpace, backend)
 		baseTime := 300
 		jitter := rand.Intn(5)
 		time.Sleep(time.Duration((baseTime*3)+jitter) * time.Second)
