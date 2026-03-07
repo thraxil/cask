@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
-	"math/rand"
 	"mime/multipart"
 	"sort"
 	"time"
@@ -23,7 +22,6 @@ type cluster struct {
 }
 
 func newCluster(myself *node, secret string, heartbeatInterval int) *cluster {
-	rand.Seed(time.Now().UnixNano())
 	if heartbeatInterval < 1 {
 		// unset. default to 1 minute
 		heartbeatInterval = 60
@@ -62,7 +60,6 @@ func (c *cluster) NodeMeta(limit int) []byte {
 }
 
 func (c *cluster) NotifyMsg([]byte) {
-	return
 }
 
 func (c *cluster) LocalState(join bool) []byte {
@@ -80,7 +77,6 @@ func (c *cluster) MergeRemoteState(buf []byte, join bool) {
 	if c.CheckSecret(hb.Secret) {
 		c.UpdateNeighbor(n)
 	}
-	return
 }
 
 // implement memberlist.EventDelegate interface
@@ -96,7 +92,6 @@ func (c *cluster) NotifyJoin(joinNode *memberlist.Node) {
 		c.AddNeighbor(n)
 		clusterJoins.Inc()
 	}
-	return
 }
 
 func (c *cluster) NotifyLeave(leaveNode *memberlist.Node) {
@@ -311,8 +306,7 @@ func hashOrder(hash string, size int, ring []ringEntry) []node {
 		}
 	}
 	// yay, slices
-	reordered := make([]ringEntry, len(ring))
-	reordered = append(ring[partitionIndex:], ring[:partitionIndex]...)
+	reordered := append(ring[partitionIndex:], ring[:partitionIndex]...)
 
 	results := make([]node, size)
 	var seen = map[string]bool{}
@@ -366,7 +360,7 @@ func (c *cluster) AddFile(key key, f multipart.File, replication int, minReplica
 			} else {
 				c.FailedNeighbor(n)
 			}
-			f.Seek(0, 0)
+			_, _ = f.Seek(0, 0)
 			if saveCount >= replication {
 				break
 			}

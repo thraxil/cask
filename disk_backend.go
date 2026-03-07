@@ -29,7 +29,7 @@ func (d diskBackend) String() string {
 
 func (d *diskBackend) Write(key key, r io.ReadCloser) error {
 	path := d.Root + key.Algorithm + "/" + key.AsPath()
-	log.Println(fmt.Sprintf("writing to %s\n", path))
+	log.Printf("writing to %s\n", path)
 	err := os.MkdirAll(path, 0755)
 	if err != nil {
 		log.Println("couldn't make directory path")
@@ -146,11 +146,11 @@ func (v *diskVerifier) VerifyKey(key key) error {
 			path := v.b.Root + key.Algorithm + "/" + key.AsPath() + "/data"
 			h := sha1.New()
 			file, err := os.Open(path)
-			defer file.Close()
 			if err != nil {
 				log.Printf("error opening %s\n", path)
 				return
 			}
+			defer file.Close()
 			_, err = io.Copy(h, file)
 			if err != nil {
 				log.Printf("error copying %s\n", path)
@@ -244,11 +244,11 @@ func visit(path string, f os.FileInfo, err error, c *cluster, s site) error {
 	}
 	h := sha1.New()
 	file, err := os.Open(path)
-	defer file.Close()
 	if err != nil {
 		log.Printf("error opening %s\n", path)
 		return err
 	}
+	defer file.Close()
 	_, err = io.Copy(h, file)
 	if err != nil {
 		log.Printf("error copying %s\n", path)
@@ -284,7 +284,6 @@ var aaeSkip = 0
 
 func (d diskBackend) ActiveAntiEntropy(cluster *cluster, site site, interval int) {
 	aaeOffset = rand.Intn(10000)
-	var jitter = 1
 	for {
 		_, err := os.ReadDir(d.Root)
 		if err != nil {
@@ -292,7 +291,7 @@ func (d diskBackend) ActiveAntiEntropy(cluster *cluster, site site, interval int
 			os.Exit(1)
 		}
 		if aaeSkip >= aaeOffset {
-			jitter = rand.Intn(5)
+			jitter := rand.Intn(5)
 			time.Sleep(time.Duration(interval+jitter) * time.Second)
 			log.Println("AAE starting at the top")
 		}
@@ -305,6 +304,6 @@ func (d diskBackend) ActiveAntiEntropy(cluster *cluster, site site, interval int
 
 func (d diskBackend) FreeSpace() uint64 {
 	var stat syscall.Statfs_t
-	syscall.Statfs(d.Root, &stat)
+	_ = syscall.Statfs(d.Root, &stat)
 	return stat.Bavail * uint64(stat.Bsize)
 }

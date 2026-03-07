@@ -2,49 +2,11 @@ package main
 
 import (
 	"bytes"
-	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
-
-// Mocks for dependencies
-type mockCluster struct {
-	secret string
-}
-
-func (m *mockCluster) CheckSecret(s string) bool {
-	return m.secret == s
-}
-
-func (m *mockCluster) AddFile(k key, r io.Reader, replication int, minReplication int) bool {
-	return true
-}
-
-// mockBackend implements the Backend interface
-type mockBackend struct {
-	readData []byte
-	exists   bool
-	err      error
-}
-
-func (m *mockBackend) String() string                        { return "mock" }
-func (m *mockBackend) Write(key key, r io.ReadCloser) error  { return nil }
-func (m *mockBackend) Read(key key) ([]byte, error)          { return m.readData, m.err }
-func (m *mockBackend) Exists(key key) bool                   { return m.exists }
-func (m *mockBackend) Delete(key key) error                  { return nil }
-func (m *mockBackend) NewVerifier(c *cluster) verifier       { return nil }
-func (m *mockBackend) ActiveAntiEntropy(c *cluster, s site, interval int) {}
-func (m *mockBackend) FreeSpace() uint64                     { return 0 }
-
-// mockVerifier implements the verifier interface
-type mockVerifier struct {
-	err error
-}
-
-func (m *mockVerifier) Verify(path string, key key, h string) error { return m.err }
-func (m *mockVerifier) VerifyKey(key key) error                     { return m.err }
 
 func TestLocalPostFormHandler(t *testing.T) {
 	// Use anonymous struct for site to satisfy interface while only providing necessary fields
@@ -122,7 +84,7 @@ func TestFileUploadSizeLimit(t *testing.T) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	part, _ := writer.CreateFormFile("file", "largefile.txt")
-	part.Write(largeContent)
+	_, _ = part.Write(largeContent)
 	writer.Close()
 
 	req := httptest.NewRequest("POST", "/local/", body)
@@ -142,7 +104,7 @@ func TestFileUploadSizeLimit(t *testing.T) {
 	body.Reset()
 	writer = multipart.NewWriter(body)
 	part, _ = writer.CreateFormFile("file", "largefile.txt")
-	part.Write(largeContent)
+	_, _ = part.Write(largeContent)
 	writer.Close()
 
 	req = httptest.NewRequest("POST", "/", body)

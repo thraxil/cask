@@ -185,15 +185,16 @@ func main() {
 
 func setupBackend(c config) backend {
 	var backend backend
-	if c.Backend == "disk" {
+	switch c.Backend {
+	case "disk":
 		backend = newDiskBackend(c.DiskBackendRoot)
-	} else if c.Backend == "s3" {
+	case "s3":
 		if c.S3AccessKey == "" || c.S3SecretKey == "" || c.S3Bucket == "" {
 			log.Fatal("need S3 ACCESS_KEY, SECRET_KEY, and bucket all configured")
 		} else {
 			backend = newS3Backend(c.S3AccessKey, c.S3SecretKey, c.S3Bucket)
 		}
-	} else {
+	default:
 		log.Fatal("unsupported backend type")
 	}
 	return backend

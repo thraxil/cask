@@ -57,7 +57,7 @@ func Test_addAndFind(t *testing.T) {
 	// remove the neighbor
 	c.RemoveNeighbor(*n2)
 	// we should not be able to retrieve them anymore
-	n3, ok = c.FindNeighborByUUID("testuuid2")
+	_, ok = c.FindNeighborByUUID("testuuid2")
 	if ok {
 		t.Error("neighbor was not removed")
 	}

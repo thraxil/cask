@@ -15,11 +15,10 @@ func localPostFormHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	secret := r.Header.Get("X-Cask-Cluster-Secret")
 	if !s.Cluster.CheckSecret(secret) {
 		log.Println("unauthorized local file request")
-		http.Error(w, "sorry, need the secret knock", 403)
+		http.Error(w, "sorry, need the secret knock", http.StatusForbidden)
 		return
 	}
 	fmt.Fprintf(w, "show form/handle post\n")
-	return
 }
 
 // read/write file requests that shall only touch
@@ -28,7 +27,7 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	secret := r.Header.Get("X-Cask-Cluster-Secret")
 	if !s.Cluster.CheckSecret(secret) {
 		log.Println("unauthorized local file request")
-		http.Error(w, "sorry, need the secret knock", 403)
+		http.Error(w, "sorry, need the secret knock", http.StatusForbidden)
 		return
 	}
 	key := r.PathValue("key")
@@ -57,11 +56,11 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	}
 	w.Header().Set("Content-Type", "application/octet")
 	w.Header().Set("ETag", "\""+key+"\"")
-	w.Write(data)
+	_, _ = w.Write(data)
 	// kick off a background goroutine to do read-repair
 	go func() {
-		s.VerifyKey(*k)
-		s.Rebalance(*k)
+		_ = s.VerifyKey(*k)
+		_ = s.Rebalance(*k)
 	}()
 }
 
@@ -69,7 +68,7 @@ func handleLocalPost(w http.ResponseWriter, r *http.Request, s *site) {
 	secret := r.Header.Get("X-Cask-Cluster-Secret")
 	if !s.Cluster.CheckSecret(secret) {
 		log.Println("unauthorized local file request")
-		http.Error(w, "sorry, need the secret knock", 403)
+		http.Error(w, "sorry, need the secret knock", http.StatusForbidden)
 		return
 	}
 
@@ -80,13 +79,13 @@ func handleLocalPost(w http.ResponseWriter, r *http.Request, s *site) {
 
 	log.Println("write a file")
 	if !s.Node.Writeable {
-		http.Error(w, "this node is read-only", 503)
+		http.Error(w, "this node is read-only", http.StatusServiceUnavailable)
 		return
 	}
 	f, _, _ := r.FormFile("file")
 	defer f.Close()
 	h := sha1.New()
-	io.Copy(h, f)
+	_, _ = io.Copy(h, f)
 	key, err := keyFromString("sha1:" + fmt.Sprintf("%x", h.Sum(nil)))
 	if err != nil {
 		http.Error(w, "bad hash", 500)
@@ -97,14 +96,13 @@ func handleLocalPost(w http.ResponseWriter, r *http.Request, s *site) {
 		fmt.Fprintf(w, "%s", key.String())
 		return
 	}
-	f.Seek(0, 0)
+	_, _ = f.Seek(0, 0)
 	err = s.Backend.Write(*key, f)
 	if err != nil {
 		http.Error(w, "could not write file", 500)
 		return
 	}
 	fmt.Fprintf(w, "%s", key.String())
-	return
 }
 
 
@@ -132,11 +130,11 @@ func fileHandler(w http.ResponseWriter, r *http.Request, s *site) {
 		}
 		w.Header().Set("Content-Type", "application/octet")
 		w.Header().Set("ETag", "\""+key+"\"")
-		w.Write(data)
+		_, _ = w.Write(data)
 		// kick off a background goroutine to do read-repair
 		go func() {
-			s.VerifyKey(*k)
-			s.Rebalance(*k)
+			_ = s.VerifyKey(*k)
+			_ = s.Rebalance(*k)
 		}()
 		return
 	}
@@ -147,7 +145,7 @@ func fileHandler(w http.ResponseWriter, r *http.Request, s *site) {
 		return
 	}
 	w.Header().Set("ETag", "\""+key+"\"")
-	w.Write(data)
+	_, _ = w.Write(data)
 }
 
 type clusterInfoPage struct {
@@ -168,7 +166,7 @@ func clusterInfoHandler(w http.ResponseWriter, r *http.Request, s *site) {
 		Site:      s,
 	}
 	t, _ := template.New("cluster").Parse(clusterTemplate)
-	t.Execute(w, p)
+	_ = t.Execute(w, p)
 }
 
 var defaultReplication = 3
@@ -189,14 +187,14 @@ func postFileHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	f, _, _ := r.FormFile("file")
 	defer f.Close()
 	h := sha1.New()
-	io.Copy(h, f)
+	_, _ = io.Copy(h, f)
 	key, err := keyFromString("sha1:" + fmt.Sprintf("%x", h.Sum(nil)))
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "bad hash", 500)
 		return
 	}
-	f.Seek(0, 0)
+	_, _ = f.Seek(0, 0)
 	success := s.Cluster.AddFile(*key, f, defaultReplication, minReplication)
 	pr := postResponse{
 		Key:     key.String(),
@@ -207,11 +205,11 @@ func postFileHandler(w http.ResponseWriter, r *http.Request, s *site) {
 		http.Error(w, "json error", 500)
 		return
 	}
-	w.Write(b)
+	_, _ = w.Write(b)
 }
 
 func joinFormHandler(w http.ResponseWriter, r *http.Request, s *site) {
-	w.Write([]byte(joinTemplate))
+	_, _ = w.Write([]byte(joinTemplate))
 }
 
 func joinHandler(w http.ResponseWriter, r *http.Request, s *site) {
@@ -224,7 +222,7 @@ func joinHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	if !s.Cluster.CheckSecret(secret) {
 		log.Println("got an unauthorized join attempt")
 		log.Println(secret)
-		http.Error(w, "need to know the secret knock", 403)
+		http.Error(w, "need to know the secret knock", http.StatusForbidden)
 		return
 	}
 	parts := strings.Split(u, ",")
@@ -242,7 +240,7 @@ func configHandler(w http.ResponseWriter, r *http.Request, s *site) {
 		log.Println(err)
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(b)
+	_, _ = w.Write(b)
 }
 
 func faviconHandler(w http.ResponseWriter, r *http.Request) {

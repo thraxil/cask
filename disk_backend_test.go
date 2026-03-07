@@ -2,14 +2,14 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 )
 
 func TestDiskBackendWriteAndRead(t *testing.T) {
 	// Create a temporary directory for testing
-	tmpdir, err := ioutil.TempDir("", "disk_backend_test")
+	tmpdir, err := os.MkdirTemp("", "disk_backend_test")
 	if err != nil {
 		t.Fatalf("Failed to create temporary directory: %v", err)
 	}
@@ -26,7 +26,7 @@ func TestDiskBackendWriteAndRead(t *testing.T) {
 	data := []byte("test data")
 
 	// Write the data to the backend
-	err = backend.Write(*key, ioutil.NopCloser(bytes.NewReader(data)))
+	err = backend.Write(*key, io.NopCloser(bytes.NewReader(data)))
 	if err != nil {
 		t.Fatalf("Write failed: %v", err)
 	}
@@ -45,7 +45,7 @@ func TestDiskBackendWriteAndRead(t *testing.T) {
 
 func TestDiskBackendExists(t *testing.T) {
 	// Create a temporary directory for testing
-	tmpdir, err := ioutil.TempDir("", "disk_backend_test")
+	tmpdir, err := os.MkdirTemp("", "disk_backend_test")
 	if err != nil {
 		t.Fatalf("Failed to create temporary directory: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestDiskBackendExists(t *testing.T) {
 
 	// Write the key to the backend
 	data := []byte("test data")
-	err = backend.Write(*key, ioutil.NopCloser(bytes.NewReader(data)))
+	err = backend.Write(*key, io.NopCloser(bytes.NewReader(data)))
 	if err != nil {
 		t.Fatalf("Write failed: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestDiskBackendExists(t *testing.T) {
 
 func TestDiskBackendDelete(t *testing.T) {
 	// Create a temporary directory for testing
-	tmpdir, err := ioutil.TempDir("", "disk_backend_test")
+	tmpdir, err := os.MkdirTemp("", "disk_backend_test")
 	if err != nil {
 		t.Fatalf("Failed to create temporary directory: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestDiskBackendDelete(t *testing.T) {
 	data := []byte("test data")
 
 	// Write the data to the backend
-	err = backend.Write(*key, ioutil.NopCloser(bytes.NewReader(data)))
+	err = backend.Write(*key, io.NopCloser(bytes.NewReader(data)))
 	if err != nil {
 		t.Fatalf("Write failed: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestDiskBackendDelete(t *testing.T) {
 
 func TestDiskBackendWriteError(t *testing.T) {
 	// Create a temporary directory for testing
-	tmpdir, err := ioutil.TempDir("", "disk_backend_test")
+	tmpdir, err := os.MkdirTemp("", "disk_backend_test")
 	if err != nil {
 		t.Fatalf("Failed to create temporary directory: %v", err)
 	}
@@ -151,7 +151,7 @@ func TestDiskBackendWriteError(t *testing.T) {
 	f.Close()
 
 	// Write the data to the backend, expecting an error
-	err = backend.Write(*key, ioutil.NopCloser(bytes.NewReader(data)))
+	err = backend.Write(*key, io.NopCloser(bytes.NewReader(data)))
 	if err == nil {
 		t.Errorf("Write should have failed but it didn't")
 	}
@@ -159,7 +159,7 @@ func TestDiskBackendWriteError(t *testing.T) {
 
 func TestDiskVerifierVerify(t *testing.T) {
 	// Create a temporary directory for testing
-	tmpdir, err := ioutil.TempDir("", "disk_verifier_test")
+	tmpdir, err := os.MkdirTemp("", "disk_verifier_test")
 	if err != nil {
 		t.Fatalf("Failed to create temporary directory: %v", err)
 	}
@@ -176,7 +176,7 @@ func TestDiskVerifierVerify(t *testing.T) {
 	data := []byte("test data")
 
 	// Write the data to the backend
-	err = backend.Write(*key, ioutil.NopCloser(bytes.NewReader(data)))
+	err = backend.Write(*key, io.NopCloser(bytes.NewReader(data)))
 	if err != nil {
 		t.Fatalf("Write failed: %v", err)
 	}
@@ -195,7 +195,7 @@ func TestDiskVerifierVerify(t *testing.T) {
 
 func TestDiskVerifierVerifyBadHash(t *testing.T) {
 	// Create a temporary directory for testing
-	tmpdir, err := ioutil.TempDir("", "disk_verifier_test")
+	tmpdir, err := os.MkdirTemp("", "disk_verifier_test")
 	if err != nil {
 		t.Fatalf("Failed to create temporary directory: %v", err)
 	}
@@ -212,7 +212,7 @@ func TestDiskVerifierVerifyBadHash(t *testing.T) {
 	data := []byte("test data")
 
 	// Write the data to the backend
-	err = backend.Write(*key, ioutil.NopCloser(bytes.NewReader(data)))
+	err = backend.Write(*key, io.NopCloser(bytes.NewReader(data)))
 	if err != nil {
 		t.Fatalf("Write failed: %v", err)
 	}

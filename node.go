@@ -71,7 +71,10 @@ func postFile(f io.Reader, targetURL, secret string) (*http.Response, error) {
 	if err != nil {
 		panic(err.Error())
 	}
-	io.Copy(fileWriter, f)
+	_, err = io.Copy(fileWriter, f)
+	if err != nil {
+		return nil, err
+	}
 	// .Close() finishes setting it up
 	// do not defer this or it will make and empty POST request
 	bodyWriter.Close()
@@ -92,7 +95,7 @@ func (n node) HashKeys() []string {
 	h := sha1.New()
 	for i := range keys {
 		h.Reset()
-		io.WriteString(h, fmt.Sprintf("%s%d", n.UUID, i))
+		_, _ = io.WriteString(h, fmt.Sprintf("%s%d", n.UUID, i))
 		keys[i] = fmt.Sprintf("%x", h.Sum(nil))
 	}
 	return keys
@@ -175,7 +178,7 @@ func (n *node) processRetrieveInfoResponse(resp *http.Response) (bool, error) {
 	if resp.Status != "200 OK" {
 		return false, errors.New("404, probably")
 	}
-	io.ReadAll(resp.Body)
+	_, _ = io.ReadAll(resp.Body)
 	return true, nil
 }
 
@@ -202,7 +205,7 @@ func (n node) CheckFile(key key, secret string) (bool, []byte, error) {
 
 func doublecheckReplica(f []byte, key key) bool {
 	hn := sha1.New()
-	io.WriteString(hn, string(f))
+	_, _ = hn.Write(f)
 	nhash := fmt.Sprintf("%x", hn.Sum(nil))
 	return "sha1:"+nhash == key.String()
 }
