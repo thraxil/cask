@@ -15,4 +15,9 @@ jobs:
     - uses: workflow/nix-shell-action@v3
       with:
         script: |
-          make test
+          make coverage
+          go tool cover -func=coverage.out
+    - uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage.out

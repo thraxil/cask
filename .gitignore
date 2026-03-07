@@ -1,3 +1,4 @@
 cask
 .direnv
 .env
+coverage.out
