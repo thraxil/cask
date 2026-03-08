@@ -11,9 +11,10 @@ type site struct {
 	MaxUploadSize  int64
 	verifier       verifier
 	rebalancer     *rebalancer
+	LogCache       *LogCache
 }
 
-func newSite(n *node, c *cluster, b backend, replication, maxReplication int, clusterSecret string, aaeInterval int, maxUploadSize int64) *site {
+func newSite(n *node, c *cluster, b backend, replication, maxReplication int, clusterSecret string, aaeInterval int, maxUploadSize int64, logCache *LogCache) *site {
 	// couple sanity checks
 	if replication < 1 {
 		replication = 1
@@ -34,6 +35,7 @@ func newSite(n *node, c *cluster, b backend, replication, maxReplication int, cl
 		ClusterSecret:  clusterSecret,
 		AAEInterval:    aaeInterval,
 		MaxUploadSize:  maxUploadSize,
+		LogCache:       logCache,
 	}
 	s.verifier = b.NewVerifier(c)
 	s.rebalancer = newRebalancer(c, *s)

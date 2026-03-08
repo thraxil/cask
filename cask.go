@@ -3,6 +3,7 @@ package main
 import (
 	_ "expvar"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -118,6 +119,8 @@ func main() {
 		// default to 2GB
 		c.MaxUploadSize = 2 * 1024 * 1024 * 1024
 	}
+	lc := newLogCache(200)
+	log.SetOutput(io.MultiWriter(os.Stderr, lc))
 	log.SetPrefix(c.UUID[:8] + " ")
 	n := newNode(c.UUID, c.BaseURL, c.Writeable)
 
@@ -138,7 +141,7 @@ func main() {
 	if err != nil {
 		log.Fatal("couldn't start gossip", err)
 	}
-	s := newSite(n, cluster, backend, c.Replication, c.MaxReplication, c.ClusterSecret, c.AAEInterval, c.MaxUploadSize)
+	s := newSite(n, cluster, backend, c.Replication, c.MaxReplication, c.ClusterSecret, c.AAEInterval, c.MaxUploadSize, lc)
 	go s.ActiveAntiEntropy()
 	go n.WatchFreeSpace(c.KeepFree, backend)
 
@@ -159,6 +162,7 @@ func main() {
 	http.HandleFunc("GET /join/", makeHandler(joinFormHandler, s))
 	http.HandleFunc("POST /join/", makeHandler(joinHandler, s))
 	http.HandleFunc("GET /config/", makeHandler(configHandler, s))
+	http.HandleFunc("GET /log/", makeHandler(logHandler, s))
 
 	http.HandleFunc("GET /favicon.ico", faviconHandler)
 	http.Handle("GET /metrics", promhttp.Handler())

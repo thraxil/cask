@@ -234,6 +234,17 @@ func joinHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	fmt.Fprintf(w, "Added node")
 }
 
+type logPage struct {
+	Logs []string
+}
+
+func logHandler(w http.ResponseWriter, r *http.Request, s *site) {
+	logs := s.LogCache.GetLogs()
+	p := logPage{Logs: logs}
+	t, _ := template.New("log").Parse(logTemplate)
+	_ = t.Execute(w, p)
+}
+
 func configHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	b, err := json.Marshal(s.Node)
 	if err != nil {
@@ -292,6 +303,7 @@ const clusterTemplate = `
 <ul class="nav nav-pills">
 <li role="presentation"><a href="/join/">Add a node manually</a></li>
 <li role="presentation"><a href="/config/">JSON config data</a></li>
+<li role="presentation"><a href="/log/">Logs</a></li>
 </ul>
 
 </div>
@@ -310,6 +322,23 @@ const joinTemplate = `
 <input type="text" name="secret" placeholder="cluster secret" class="form-control"/><br />
 <input type="submit" value="add node" />
 </form>
+</div>
+</body>
+</html>
+`
+
+const logTemplate = `
+<html><head><title>Logs</title>
+<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css" />
+</head>
+<body>
+<div class="container">
+<h1>Recent Logs</h1>
+<ul class="list-group">
+{{range .Logs}}
+<li class="list-group-item"><tt>{{.}}</tt></li>
+{{end}}
+</ul>
 </div>
 </body>
 </html>
