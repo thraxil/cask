@@ -235,6 +235,11 @@ func visit(path string, f os.FileInfo, err error, c *cluster, s site) error {
 		return err
 	}
 
+	defer func() {
+		jitter := rand.Intn(5)
+		time.Sleep(time.Duration(s.AAEInterval+jitter) * time.Second)
+	}()
+
 	log.Printf("AAE visiting %s\n", path)
 
 	key, err := keyFromPath(path)
@@ -265,10 +270,6 @@ func visit(path string, f os.FileInfo, err error, c *cluster, s site) error {
 		return err
 	}
 
-	// slow things down a little to keep server load down
-	var baseTime = 10
-	jitter := rand.Intn(5)
-	time.Sleep(time.Duration(baseTime+jitter) * time.Second)
 	return nil
 }
 

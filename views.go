@@ -48,6 +48,12 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *site) {
 		return
 	}
 
+	if r.Method == "HEAD" {
+		w.Header().Set("Content-Type", "application/octet")
+		w.Header().Set("ETag", "\""+key+"\"")
+		return
+	}
+
 	data, err := s.Backend.Read(*k)
 	if err != nil {
 		log.Println(err)
@@ -57,11 +63,6 @@ func localHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	w.Header().Set("Content-Type", "application/octet")
 	w.Header().Set("ETag", "\""+key+"\"")
 	_, _ = w.Write(data)
-	// kick off a background goroutine to do read-repair
-	go func() {
-		_ = s.VerifyKey(*k)
-		_ = s.Rebalance(*k)
-	}()
 }
 
 func handleLocalPost(w http.ResponseWriter, r *http.Request, s *site) {
@@ -234,6 +235,10 @@ func joinHandler(w http.ResponseWriter, r *http.Request, s *site) {
 	fmt.Fprintf(w, "Added node")
 }
 
+func uploadFormHandler(w http.ResponseWriter, r *http.Request, s *site) {
+	_, _ = w.Write([]byte(uploadTemplate))
+}
+
 type logPage struct {
 	Logs []string
 }
@@ -304,6 +309,7 @@ const clusterTemplate = `
 <li role="presentation"><a href="/join/">Add a node manually</a></li>
 <li role="presentation"><a href="/config/">JSON config data</a></li>
 <li role="presentation"><a href="/log/">Logs</a></li>
+<li role="presentation"><a href="/upload/">Upload</a></li>
 </ul>
 
 </div>
@@ -339,6 +345,22 @@ const logTemplate = `
 <li class="list-group-item"><tt>{{.}}</tt></li>
 {{end}}
 </ul>
+</div>
+</body>
+</html>
+`
+
+const uploadTemplate = `
+<html><head><title>Upload File</title>
+<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css" />
+</head>
+<body>
+<div class="container">
+<h1>Upload File</h1>
+<form action="/" method="post" enctype="multipart/form-data" class="form">
+<input type="file" name="file" class="form-control"/><br />
+<input type="submit" value="upload" />
+</form>
 </div>
 </body>
 </html>

@@ -9,6 +9,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"strconv"
 	"time"
 
 	"github.com/hashicorp/memberlist"
@@ -149,6 +150,7 @@ func main() {
 	log.Println("Root: " + c.DiskBackendRoot)
 	log.Println("UUID: " + c.UUID)
 	log.Println("Base URL: " + c.BaseURL)
+	log.Println("AAEInterval: " + strconv.Itoa(c.AAEInterval))
 	log.Println("=======================================")
 
 	http.HandleFunc("GET /", makeHandler(clusterInfoHandler, s))
@@ -163,6 +165,7 @@ func main() {
 	http.HandleFunc("POST /join/", makeHandler(joinHandler, s))
 	http.HandleFunc("GET /config/", makeHandler(configHandler, s))
 	http.HandleFunc("GET /log/", makeHandler(logHandler, s))
+	http.HandleFunc("GET /upload/", makeHandler(uploadFormHandler, s))
 
 	http.HandleFunc("GET /favicon.ico", faviconHandler)
 	http.Handle("GET /metrics", promhttp.Handler())
