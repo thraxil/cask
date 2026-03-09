@@ -17,7 +17,7 @@ jobs:
         script: |
           make coverage
           go tool cover -func=coverage.out
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: coverage-report
         path: coverage.out
