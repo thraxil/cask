@@ -1,0 +1,38 @@
+name: Release
+
+# Every successful Test run on a push to main becomes a GitHub release tagged
+# r<run number>, with a static linux/amd64 build and SHA256SUMS. Deploys pin a
+# tag and check the download against SHA256SUMS.
+on:
+  workflow_run:
+    workflows: [Test]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    env:
+      TAG: r${{ github.run_number }}
+      SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SHA }}
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Build
+        run: |
+          mkdir dist
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o dist/cask-linux-amd64 .
+      - name: Checksums
+        run: cd dist && sha256sum -- * > SHA256SUMS
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$TAG" dist/* --target "$SHA" --title "$TAG" --generate-notes
